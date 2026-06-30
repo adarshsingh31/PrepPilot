@@ -19,7 +19,7 @@ function Login() {
       setSuccess(true);
       // Mock redirect after success
       setTimeout(() => {
-        navigate("/");
+        navigate("/dashboard");
       }, 1000);
     }, 1500);
   };

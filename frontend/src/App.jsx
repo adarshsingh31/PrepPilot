@@ -5,6 +5,16 @@ import Singup from "./pages/Singup/Singup";
 import OtpVerification from "./pages/OtpVerification/OtpVerification";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import MockInterview from "./pages/MockInterview/MockInterview";
+import ResumeAnalyzer from "./pages/ResumeAnalyzer/ResumeAnalyzer";
+import CodingPractice from "./pages/CodingPractice/CodingPractice";
+import Profile from "./pages/Profile/Profile";
+import QuestionBank from "./pages/QuestionBank/QuestionBank";
+import Progress from "./pages/Progress/Progress";
+import Settings from "./pages/Settings/Settings";
+import HelpSupport from "./pages/HelpSupport/HelpSupport";
+import StudyPlan from "./pages/StudyPlan/StudyPlan";
 
 function App() {
   return (
@@ -16,6 +26,16 @@ function App() {
         <Route path="/otp" element={<OtpVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/mock-interview" element={<MockInterview />} />
+        <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+        <Route path="/coding-practice" element={<CodingPractice />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/question-bank" element={<QuestionBank />} />
+                <Route path="/progress" element={<Progress />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/help-support" element={<HelpSupport />} />
+        <Route path="/study-plan" element={<StudyPlan />} />
       </Routes>
     </Router>
   );

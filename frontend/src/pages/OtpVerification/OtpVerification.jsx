@@ -64,7 +64,7 @@ function OtpVerification() {
         setLoading(false);
         setSuccess(true);
         setTimeout(() => {
-          navigate("/");
+          navigate("/dashboard");
         }, 1500);
       }, 1500);
     }

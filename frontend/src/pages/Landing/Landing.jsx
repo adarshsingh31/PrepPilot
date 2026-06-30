@@ -76,7 +76,7 @@ function Landing() {
 
             {/* Right Column: Visuals */}
             <div className="relative flex justify-center items-center">
-              <img alt="PrepPilot Platform Illustration" className="max-w-full h-auto drop-shadow-2xl rounded-2xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV7TetoAaxS4EsiwVe0TBITtDXvEQuHEfh6rgHZor4aSCfuPniqCf-eL5b85nLd_Litv-785tdSJWtC5dxKMbX18JGpFdREnUZrV5JLyL9ZI_3xVLpbsY2RAZFbXQl1heipksm4VMJbqneiEAGS6PnbLc8vNY3e48uwY81UTjLQk3AjgOctdFkrnXDRijcnvk0LLritoxuHcTyN3nddXA-Z7RiFkaUgSqsPK3SM59xTqtjO5pDnl_i54j_dzZDeUQgl2I1pUFHXns" />
+              <img alt="AI-Powered Mock Interview Illustration" className="max-w-full h-auto drop-shadow-2xl rounded-2xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVjoSiWPhfypSKb3-PSEdXdZM6yg_QzWLeRwUYqRftZfU8_Sb8P1mTpY_4_HIP3Nlrl_3IzG_B-WZMYH_D2vLfa3ffOpKYfqEDTYRHHG63cPEc7iRwJ0vw8OtzobYc1ujbr6WYInZCmwGCtvj5q9HGzMuHkoSpJ3OcjwRhUzDZFLklhEDwhVc6ghaGQdjFGV0EWz1ZMafF29Nipysy6BQPkwq6Ezde2ECiSgHs_te7wkfzXGJpuSC_araMGkWElfRXWZaekPUE70I" />
             </div>
           </div>
         </section>
