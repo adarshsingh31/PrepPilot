@@ -1,8 +1,37 @@
 import { Link } from "react-router-dom";
+import MagicRings from './MagicRings';
 
 function Landing() {
   return (
-    <div className="antialiased min-h-screen bg-white text-gray-900 font-sans">
+    <div className="antialiased min-h-screen bg-white text-gray-900 font-sans relative">
+      {/* Background Magic Rings */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-screen h-screen pointer-events-none z-[1]">
+        <MagicRings
+          color="#00008B"
+          colorTwo="#0000CD"
+          ringCount={6}
+          speed={1}
+          attenuation={10}
+          lineThickness={2}
+          baseRadius={0.35}
+          radiusStep={0.1}
+          scaleRate={0.1}
+          opacity={1.0}
+          blur={0}
+          noiseAmount={0.1}
+          rotation={0}
+          ringGap={1.5}
+          fadeIn={0.7}
+          fadeOut={0.5}
+          followMouse={false}
+          mouseInfluence={0.2}
+          hoverScale={1.2}
+          parallax={0.05}
+          clickBurst={false}
+        />
+      </div>
+
+      <div className="relative z-10">
       {/* TopNavBar */}
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100">
         <nav className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
@@ -82,7 +111,7 @@ function Landing() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-24 bg-white">
+        <section id="features" className="py-24">
           <div className="max-w-7xl mx-auto px-6 text-center">
             <span className="text-primary font-bold text-xs uppercase tracking-widest mb-4 inline-block">Features</span>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need to Succeed</h2>
@@ -226,7 +255,7 @@ function Landing() {
         </section>
 
         {/* Testimonials Section */}
-        <section id="testimonials" className="py-24 bg-white overflow-hidden">
+        <section id="testimonials" className="py-24 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16">
               <span className="text-primary font-bold text-xs uppercase tracking-widest mb-4 inline-block">Testimonials</span>
@@ -397,6 +426,7 @@ function Landing() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

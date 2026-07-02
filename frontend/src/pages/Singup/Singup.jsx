@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+import { registerUser } from "../../services/authService";
+
 import AuthLayout from "../../components/AuthLayout";
 import AuthCard from "../../components/AuthCard";
 import AuthInput from "../../components/AuthInput";
@@ -48,7 +51,6 @@ const Singup = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSuccessMessage("");
@@ -57,20 +59,28 @@ const Singup = () => {
     if (!validate()) return;
 
     setLoading(true);
+
     try {
-      // Mock API call
-      setTimeout(() => {
-        setLoading(false);
-        setSuccessMessage("Account created successfully! Redirecting you to login...");
-        setTimeout(() => {
-          navigate("/login");
-        }, 2000);
-      }, 1500);
-    } catch (err) {
-      setErrors({
-        form: err.message || "Registration failed. Please try again.",
+      const response = await registerUser({
+        name: fullName,
+        email,
+        password,
       });
       setLoading(false);
+
+      setSuccessMessage(response.message);
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (err) {
+      setLoading(false);
+
+      setErrors({
+        form:
+          err.response?.data?.message ||
+          "Registration failed. Please try again.",
+      });
     }
   };
 
@@ -87,10 +97,10 @@ const Singup = () => {
                 check_circle
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-on-surface">
-              Success
-            </h3>
-            <p className="text-base text-on-surface-variant">{successMessage}</p>
+            <h3 className="text-2xl font-bold text-on-surface">Success</h3>
+            <p className="text-base text-on-surface-variant">
+              {successMessage}
+            </p>
           </div>
         ) : (
           <form

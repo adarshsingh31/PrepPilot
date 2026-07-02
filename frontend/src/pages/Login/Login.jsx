@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { loginUser } from "../../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../../components/AuthLayout";
 import AuthCard from "../../components/AuthCard";
@@ -41,20 +42,33 @@ const Login = () => {
     if (!validate()) return;
 
     setLoading(true);
+
     try {
-      // Mock API request
+      const response = await loginUser({
+        email,
+        password,
+      });
+
+      // Save JWT Token
+      localStorage.setItem("token", response.token);
+
+      // Show success message
+      setSuccessMessage(response.message);
+
+      setLoading(false);
+
+      // Redirect to Dashboard
       setTimeout(() => {
-        setLoading(false);
-        setSuccessMessage("Login successful! Welcome back.");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 1500);
+        navigate("/dashboard");
       }, 1500);
     } catch (err) {
-      setErrors({
-        form: err.message || "Something went wrong. Please try again.",
-      });
       setLoading(false);
+
+      setErrors({
+        form:
+          err.response?.data?.message ||
+          "Something went wrong. Please try again.",
+      });
     }
   };
 
@@ -71,10 +85,10 @@ const Login = () => {
                 check_circle
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-on-surface">
-              Success
-            </h3>
-            <p className="text-base text-on-surface-variant">{successMessage}</p>
+            <h3 className="text-2xl font-bold text-on-surface">Success</h3>
+            <p className="text-base text-on-surface-variant">
+              {successMessage}
+            </p>
           </div>
         ) : (
           <form
