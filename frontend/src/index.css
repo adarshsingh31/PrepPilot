@@ -74,6 +74,29 @@
   background: rgba(255, 255, 255, 0.7);
 }
 
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.orb {
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: drift 20s infinite alternate ease-in-out;
+}
+
+@keyframes drift {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(100px, 50px) scale(1.2); }
+}
+
+.active-tab {
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+
 .soft-shadow {
   box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.08), 0 10px 10px -5px rgba(79, 70, 229, 0.04);
 }

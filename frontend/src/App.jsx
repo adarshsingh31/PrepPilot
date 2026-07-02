@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { SidebarProvider } from "./components/SidebarContext";
 import Landing from "./pages/Landing/Landing";
 import Login from "./pages/Login/Login";
 import Singup from "./pages/Singup/Singup";
@@ -19,24 +20,26 @@ import StudyPlan from "./pages/StudyPlan/StudyPlan";
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Singup />} />
-        <Route path="/otp" element={<OtpVerification />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/mock-interview" element={<MockInterview />} />
-        <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
-        <Route path="/coding-practice" element={<CodingPractice />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/question-bank" element={<QuestionBank />} />
-                <Route path="/progress" element={<Progress />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/help-support" element={<HelpSupport />} />
-        <Route path="/study-plan" element={<StudyPlan />} />
-      </Routes>
+      <SidebarProvider>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Singup />} />
+          <Route path="/otp" element={<OtpVerification />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/mock-interview" element={<MockInterview />} />
+          <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+          <Route path="/coding-practice" element={<CodingPractice />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/question-bank" element={<QuestionBank />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/help-support" element={<HelpSupport />} />
+          <Route path="/study-plan" element={<StudyPlan />} />
+        </Routes>
+      </SidebarProvider>
     </Router>
   );
 }

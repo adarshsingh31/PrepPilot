@@ -1,236 +1,262 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "../../components/AuthLayout";
+import AuthCard from "../../components/AuthCard";
+import AuthInput from "../../components/AuthInput";
+import PasswordInput from "../../components/PasswordInput";
 
-function Singup() {
+const Singup = () => {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agree, setAgree] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const validate = () => {
+    const newErrors = {};
+    if (!fullName.trim()) {
+      newErrors.fullName = "Full name is required.";
     }
-    setLoading(true);
 
-    // Mock API signup request
-    setTimeout(() => {
+    if (!email) {
+      newErrors.email = "Email address is required.";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+
+    if (!password) {
+      newErrors.password = "Password is required.";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters.";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password.";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (!agreeTerms) {
+      newErrors.agreeTerms = "You must agree to the Terms & Conditions.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSuccessMessage("");
+    setErrors({});
+
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      // Mock API call
+      setTimeout(() => {
+        setLoading(false);
+        setSuccessMessage("Account created successfully! Redirecting you to login...");
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      }, 1500);
+    } catch (err) {
+      setErrors({
+        form: err.message || "Registration failed. Please try again.",
+      });
       setLoading(false);
-      navigate("/otp");
-    }, 1500);
+    }
   };
 
   return (
-    <div className="bg-background text-on-background min-h-screen flex flex-col font-sans">
-      <main className="flex-grow grid grid-cols-1 md:grid-cols-2">
-        {/* Left Side: Illustration Section */}
-        <section className="hidden md:flex flex-col justify-center items-center p-12 bg-primary-fixed relative overflow-hidden min-h-screen">
-          {/* Decorative background elements */}
-          <div className="absolute top-0 left-0 w-64 h-64 bg-primary/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-tertiary-fixed-dim/20 rounded-full translate-x-1/3 translate-y-1/3"></div>
-          
-          <div className="relative z-10 max-w-md text-center flex flex-col items-center">
-            <div className="mb-12 rounded-xl overflow-hidden shadow-2xl transform transition-transform hover:scale-105 duration-500 w-full">
-              <img 
-                className="w-full aspect-[4/3] object-cover" 
-                alt="A cinematic, minimalist digital illustration depicting a professional reaching the summit of a mountain made of glowing data nodes." 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoFagHkOVOymdWeP0HAOljGMM0ioKvdTlicFF0w1qiDHYvLgbXBlx5dKfmE_OfqMH2pNU_ByWd2BmlqTifIfSp_K1Ynmp4RwI2hh_Kvglid2NOWy1fTovYURIcFfVsn1D-K6vgXheOrwYM84YuIygKeZhuuRSrV4Dd9EDJa_DmYrKzLfPnYOebJn-EwXrVlpOY2ExqqqtRZcrno_GRg7iSmPv3w7NMIal7KyfQDjeuio0zkJvW3G3EGqKDN85bVaMBRm9-dMid8L0" 
-              />
-            </div>
-            <h2 className="text-3xl font-extrabold text-on-primary-fixed mb-4">Master Your Future</h2>
-            <p className="text-lg text-on-secondary-fixed-variant leading-relaxed">
-              Join over 50,000 candidates who transformed their interview performance with PrepPilot's AI-driven insights.
-            </p>
-            {/* Achievement Chips */}
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <span className="px-4 py-2 bg-white/50 backdrop-blur-md rounded-full text-sm font-semibold text-primary flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">verified</span> 98% Success Rate
-              </span>
-              <span className="px-4 py-2 bg-white/50 backdrop-blur-md rounded-full text-sm font-semibold text-primary flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">bolt</span> 24/7 AI Mock Interviews
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Right Side: Form Section */}
-        <section className="flex flex-col justify-center items-center p-8 bg-surface min-h-screen">
-          <div className="w-full max-w-md">
-            {/* Brand Anchor */}
-            <div className="mb-12 md:mb-8 text-center md:text-left">
-              <span className="text-2xl font-bold text-primary">PrepPilot</span>
-            </div>
-            
-            <div className="mb-8 text-left">
-              <h1 className="text-3xl font-extrabold text-on-surface mb-2">Create Your Account</h1>
-              <p className="text-on-surface-variant font-medium">Start your interview preparation journey today.</p>
-            </div>
-
-            {/* Form */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Full Name */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-on-surface mb-2" htmlFor="name">Full Name</label>
-                <input 
-                  className="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg text-on-surface placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all" 
-                  id="name" 
-                  placeholder="Enter your full name" 
-                  required
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-
-              {/* Email */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-on-surface mb-2" htmlFor="email">Email Address</label>
-                <input 
-                  className="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg text-on-surface placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all" 
-                  id="email" 
-                  placeholder="name@company.com" 
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              {/* Password */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-on-surface mb-2" htmlFor="password">Password</label>
-                <div className="relative">
-                  <input 
-                    className="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg text-on-surface placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all pr-12" 
-                    id="password" 
-                    placeholder="••••••••" 
-                    required
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors" 
-                    onClick={() => setShowPassword(!showPassword)} 
-                    type="button"
-                  >
-                    <span className="material-symbols-outlined">
-                      {showPassword ? "visibility_off" : "visibility"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="text-left">
-                <label className="block text-sm font-bold text-on-surface mb-2" htmlFor="confirm-password">Confirm Password</label>
-                <div className="relative">
-                  <input 
-                    className="w-full px-4 py-3 bg-white border border-outline-variant rounded-lg text-on-surface placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all pr-12" 
-                    id="confirm-password" 
-                    placeholder="••••••••" 
-                    required
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                  <button 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary transition-colors" 
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                    type="button"
-                  >
-                    <span className="material-symbols-outlined">
-                      {showConfirmPassword ? "visibility_off" : "visibility"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* T&C Checkbox */}
-              <div className="flex items-start gap-3 py-2 text-left">
-                <input 
-                  className="mt-1 w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" 
-                  id="terms" 
-                  required
-                  type="checkbox"
-                  checked={agree}
-                  onChange={(e) => setAgree(e.target.checked)}
-                />
-                <label className="text-sm font-medium text-on-surface-variant cursor-pointer select-none" htmlFor="terms">
-                  I agree to the <a className="text-primary hover:underline" href="#">Terms & Conditions</a> and <a className="text-primary hover:underline" href="#">Privacy Policy</a>.
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <button 
-                className="w-full py-4 bg-primary text-on-primary font-bold rounded-lg shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2" 
-                type="submit"
-                disabled={loading}
+    <AuthLayout>
+      <AuthCard>
+        {successMessage ? (
+          <div className="space-y-4 py-8 text-center animate-pulse">
+            <div className="inline-flex items-center justify-center p-3 bg-tertiary/10 rounded-full text-tertiary mb-2">
+              <span
+                className="material-symbols-outlined text-[36px]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                {loading ? (
-                  <>
-                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                    Creating Account...
-                  </>
-                ) : (
-                  "Create Account"
-                )}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-outline-variant"></div>
+                check_circle
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold text-on-surface">
+              Success
+            </h3>
+            <p className="text-base text-on-surface-variant">{successMessage}</p>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 transition-all"
+            id="registerForm"
+          >
+            {errors.form && (
+              <div className="p-4 bg-error-container/30 border border-error/30 rounded-lg text-error text-sm flex items-start gap-2">
+                <span className="material-symbols-outlined text-[20px] shrink-0">
+                  warning
+                </span>
+                <span>{errors.form}</span>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-surface px-4 text-on-surface-variant uppercase tracking-wider font-bold">OR</span>
+            )}
+
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-[0.18em]">
+                Start free
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold text-on-surface">
+                  Create your account.
+                </h2>
+                <p className="text-base text-on-surface-variant">
+                  Set up your profile to master your interview skills.
+                </p>
               </div>
             </div>
 
-            {/* Social Signup */}
-            <button className="w-full py-4 bg-white border border-outline-variant text-on-surface font-bold rounded-lg flex items-center justify-center gap-3 hover:bg-surface-container-low transition-colors duration-200">
-              <img 
-                alt="Google Logo" 
-                className="w-5 h-5" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuADoORIJWGA1f-Msh4X3f_I2nSP28OHLG5rwMu-D2l_zDkak0YTO1rj28qO_IXcLihqAAjCgDCzyiBL6LDZF5Dz0EvVDcFW-Dz_tg3JDv6RmNW77qDfL9MOPFm14N1OU9PxwPLpvEYGbjDwns3qD6uc_UzNf3UAv7xJEfhkc8EYWEO_eYaU3LVkjI7Mzs00-SmVV5Ni2FZcVclAyNyEu5FVvX-_zsT8VBxnQGWEJDfgNMK7UfEGVpvO4hl2G8Bl0YE0P6mbBgWBXTA" 
+            <AuthInput
+              label="Full Name"
+              type="text"
+              name="fullName"
+              placeholder="John Doe"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              error={errors.fullName}
+            />
+
+            <AuthInput
+              label="Email Address"
+              type="email"
+              name="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
+              autoComplete="email"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <PasswordInput
+                label="Password"
+                name="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={errors.password}
+                autoComplete="new-password"
               />
-              Continue with Google
+              <PasswordInput
+                label="Confirm"
+                name="confirmPassword"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                error={errors.confirmPassword}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className="space-y-1 text-base select-none">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="rounded border-outline-variant bg-surface-container-low text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                />
+                <span className="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">
+                  I agree to the{" "}
+                  <a
+                    href="#"
+                    className="text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Terms &amp; Conditions
+                  </a>
+                </span>
+              </label>
+              {errors.agreeTerms && (
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">
+                    error
+                  </span>
+                  {errors.agreeTerms}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 mt-2 bg-primary text-on-primary font-bold text-lg rounded-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-on-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
 
-            {/* Footer Link */}
-            <div className="mt-8 text-center">
-              <p className="text-on-surface-variant font-medium">
-                Already have an account?{" "}
-                <Link to="/login" className="text-primary font-bold hover:underline ml-1">
-                  Login
-                </Link>
-              </p>
+            <div className="flex items-center gap-3 text-on-surface-variant text-xs font-semibold uppercase tracking-[0.2em] my-4">
+              <span className="h-px flex-1 bg-outline-variant/40"></span>
+              <span>or continue with</span>
+              <span className="h-px flex-1 bg-outline-variant/40"></span>
             </div>
-          </div>
-        </section>
-      </main>
 
-      {/* Simple Transactional Footer */}
-      <footer className="bg-surface border-t border-outline-variant py-6 px-12 text-center md:text-left mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="text-sm font-semibold text-on-secondary-fixed-variant">© 2024 PrepPilot AI. All rights reserved.</span>
-          <div className="flex gap-6">
-            <a className="text-sm font-semibold text-on-secondary-fixed-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
-            <a className="text-sm font-semibold text-on-secondary-fixed-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
-            <a className="text-sm font-semibold text-on-secondary-fixed-variant hover:text-primary transition-colors" href="#">Help Center</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+            <button
+              type="button"
+              className="w-full py-3.5 rounded-lg border border-outline-variant/40 bg-surface-container-low text-on-surface font-semibold transition-all hover:border-primary/40 hover:bg-surface-container"
+            >
+              <span className="inline-flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">
+                  mail
+                </span>
+                Continue with Google
+              </span>
+            </button>
+
+            <p className="text-center text-base text-on-surface-variant mt-4">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-primary font-semibold hover:underline"
+              >
+                Sign in
+              </Link>
+            </p>
+          </form>
+        )}
+      </AuthCard>
+    </AuthLayout>
   );
-}
+};
 
 export default Singup;
