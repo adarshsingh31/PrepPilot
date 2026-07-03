@@ -52,6 +52,8 @@ const Login = () => {
       // Save JWT Token
       localStorage.setItem("token", response.token);
 
+      // Save User Details
+      localStorage.setItem("user", JSON.stringify(response.user));
       // Show success message
       setSuccessMessage(response.message);
 

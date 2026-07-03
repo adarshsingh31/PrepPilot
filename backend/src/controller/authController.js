@@ -66,6 +66,13 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: "Login Successful",
       token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -94,7 +101,10 @@ const updateProfile = async (req, res) => {
 
     // Check if email already in use
     if (email) {
-      const emailExists = await User.findOne({ email, _id: { $ne: req.user.id } });
+      const emailExists = await User.findOne({
+        email,
+        _id: { $ne: req.user.id },
+      });
       if (emailExists) {
         return res.status(400).json({ message: "Email already in use" });
       }
@@ -103,12 +113,12 @@ const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { name, email },
-      { new: true }
+      { new: true },
     ).select("-password");
 
     res.status(200).json({
       message: "Profile Updated Successfully",
-      user: updatedUser
+      user: updatedUser,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,22 +1,21 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { useSidebar } from "./SidebarContext";
-
 /* ─── nav items ─────────────────────────────────────────────────────────── */
 const NAV_MAIN = [
-  { to: "/dashboard",       icon: "dashboard",   label: "Dashboard"        },
-  { to: "/mock-interview",  icon: "video_chat",  label: "AI Mock Interview"},
-  { to: "/resume-analyzer", icon: "description", label: "Resume Analyzer"  },
-  { to: "/coding-practice", icon: "code",        label: "Coding Practice"  },
-  { to: "/progress",        icon: "trending_up", label: "Progress"         },
-  { to: "/question-bank",   icon: "inventory_2", label: "Question Bank"    },
-  { to: "/study-plan",      icon: "event_note",  label: "Study Plan",  fill: true },
+  { to: "/dashboard", icon: "dashboard", label: "Dashboard" },
+  { to: "/mock-interview", icon: "video_chat", label: "AI Mock Interview" },
+  { to: "/resume-analyzer", icon: "description", label: "Resume Analyzer" },
+  { to: "/coding-practice", icon: "code", label: "Coding Practice" },
+  { to: "/progress", icon: "trending_up", label: "Progress" },
+  { to: "/question-bank", icon: "inventory_2", label: "Question Bank" },
+  { to: "/study-plan", icon: "event_note", label: "Study Plan", fill: true },
 ];
 
 const NAV_BOTTOM = [
-  { to: "/profile",      icon: "person",   label: "Profile"     },
-  { to: "/settings",     icon: "settings", label: "Settings"    },
-  { to: "/help-support", icon: "help",     label: "Help Center" },
+  { to: "/profile", icon: "person", label: "Profile" },
+  { to: "/settings", icon: "settings", label: "Settings" },
+  { to: "/help-support", icon: "help", label: "Help Center" },
 ];
 
 /* ─── Tooltip ─────────────────────────────────────────────────────────── */
@@ -42,8 +41,10 @@ function NavItem({ to, icon, label, fill, collapsed }) {
   const { pathname } = useLocation();
   const active = pathname === to;
 
-  const base = "flex items-center gap-3 py-3 rounded-lg transition-all duration-200 cursor-pointer";
-  const activeClass = "bg-primary-container text-on-primary-container font-semibold";
+  const base =
+    "flex items-center gap-3 py-3 rounded-lg transition-all duration-200 cursor-pointer";
+  const activeClass =
+    "bg-primary-container text-on-primary-container font-semibold";
   const inactiveClass =
     "text-secondary dark:text-secondary-fixed-dim hover:text-primary hover:bg-surface-container-high dark:hover:bg-secondary-fixed-dim/20";
 
@@ -56,7 +57,9 @@ function NavItem({ to, icon, label, fill, collapsed }) {
     >
       <span
         className="material-symbols-outlined shrink-0"
-        style={fill || active ? { fontVariationSettings: "'FILL' 1" } : undefined}
+        style={
+          fill || active ? { fontVariationSettings: "'FILL' 1" } : undefined
+        }
       >
         {icon}
       </span>
@@ -75,20 +78,31 @@ function NavItem({ to, icon, label, fill, collapsed }) {
 
 /* ─── AppLayout ─────────────────────────────────────────────────────── */
 export default function AppLayout({ children }) {
-  const { isSidebarOpen, isMobileOpen, isMobile, collapsed, toggleSidebar, setIsMobileOpen } =
-    useSidebar();
+  const {
+    isSidebarOpen,
+    isMobileOpen,
+    isMobile,
+    collapsed,
+    toggleSidebar,
+    setIsMobileOpen,
+  } = useSidebar();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const user = JSON.parse(localStorage.getItem("user"));
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const overlayRef = useRef(null);
+  const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
   const sidebarWidth = collapsed ? "w-20" : "w-72";
   const mainMargin = isMobile ? "ml-0" : collapsed ? "ml-20" : "ml-72";
 
   return (
     <div className="bg-background text-on-surface font-body-md antialiased overflow-hidden">
       <div className="flex h-screen overflow-hidden">
-
         {/* ── Sidebar ── */}
         <aside
           className={`
@@ -98,16 +112,22 @@ export default function AppLayout({ children }) {
             shadow-sm flex flex-col py-6 z-50 overflow-y-auto overflow-x-hidden
             transition-[width] duration-300 ease-in-out
             ${sidebarWidth}
-            ${isMobile
-              ? `${isMobileOpen ? "translate-x-0" : "-translate-x-full"} w-72 transition-transform`
-              : "translate-x-0"
+            ${
+              isMobile
+                ? `${isMobileOpen ? "translate-x-0" : "-translate-x-full"} w-72 transition-transform`
+                : "translate-x-0"
             }
           `}
         >
           {/* Logo */}
-          <div className={`flex items-center mb-8 px-2 ${collapsed ? "justify-center" : "gap-3 pl-4"}`}>
+          <div
+            className={`flex items-center mb-8 px-2 ${collapsed ? "justify-center" : "gap-3 pl-4"}`}
+          >
             <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span
+                className="material-symbols-outlined text-white"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
                 rocket_launch
               </span>
             </div>
@@ -126,14 +146,24 @@ export default function AppLayout({ children }) {
           </div>
 
           {/* Main nav */}
-          <nav className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1.5 ${collapsed ? "px-2" : "px-4"}`}>
+          <nav
+            className={`flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-1.5 ${collapsed ? "px-2" : "px-4"}`}
+          >
             {NAV_MAIN.map((item) => (
-              <NavItem key={item.to} {...item} collapsed={collapsed && !isMobile} />
+              <NavItem
+                key={item.to}
+                {...item}
+                collapsed={collapsed && !isMobile}
+              />
             ))}
 
             <div className="pt-4 mt-4 border-t border-outline-variant space-y-1.5">
               {NAV_BOTTOM.map((item) => (
-                <NavItem key={item.to} {...item} collapsed={collapsed && !isMobile} />
+                <NavItem
+                  key={item.to}
+                  {...item}
+                  collapsed={collapsed && !isMobile}
+                />
               ))}
             </div>
           </nav>
@@ -150,8 +180,8 @@ export default function AppLayout({ children }) {
                 </Link>
               </Tooltip>
             ) : (
-              <Link
-                to="/"
+              <button
+                onClick={handleLogout}
                 className="text-error hover:bg-error-container/20 transition-colors duration-200 px-4 py-3 rounded-lg flex items-center gap-3 w-full"
               >
                 <span className="material-symbols-outlined">logout</span>
@@ -162,7 +192,7 @@ export default function AppLayout({ children }) {
                 >
                   Log Out
                 </span>
-              </Link>
+              </button>
             )}
           </div>
         </aside>
@@ -193,8 +223,8 @@ export default function AppLayout({ children }) {
                   {isMobile
                     ? "menu"
                     : isSidebarOpen
-                    ? "left_panel_close"
-                    : "left_panel_open"}
+                      ? "left_panel_close"
+                      : "left_panel_open"}
                 </span>
               </button>
 
@@ -229,13 +259,17 @@ export default function AppLayout({ children }) {
               </button>
               <div className="flex items-center gap-3 pl-4 md:pl-6 border-l border-outline-variant">
                 <div className="hidden sm:block text-right">
-                  <p className="font-bold text-on-surface text-sm">Adarsh Singh</p>
-                  <p className="text-[11px] text-on-surface-variant">NIT Raipur</p>
+                  <p className="font-bold text-on-surface text-sm">
+                    {user?.name}
+                  </p>
+                  <p className="text-[11px] text-on-surface-variant">
+                    {user?.email}
+                  </p>
                 </div>
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-primary-fixed overflow-hidden">
                   <img
                     className="w-full h-full object-cover"
-                    alt="Adarsh Singh"
+                    alt="user details"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLrPT_yqX5LpLoVMY5D1-zozMZZgmOejC34ZHdh2niVx2vPlu7hcOY13GNvlFQOYpZ6QwgCzYAtedNIOWLXndwYMD-AMVj5SKcbV8Vm4s2ZUA1bQrXn7RZakbk1D-XMlgEqv_Un0IVpCHol-J33_TrsZFXB-_Dw8IB_Lr_BFCbrZPKcWuSo44OjfbQxniN8wX1Q8OtYahGxmGCkvfb5c16X2EAgzAvQXOQGKR6qxRtGYAUvZ7wnLy-lqeORv5nGabvBbUwroMHuFU"
                   />
                 </div>
