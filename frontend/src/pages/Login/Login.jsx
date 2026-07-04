@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { loginUser } from "../../services/authService";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import AuthLayout from "../../components/AuthLayout";
 import AuthCard from "../../components/AuthCard";
 import AuthInput from "../../components/AuthInput";
@@ -8,6 +9,7 @@ import PasswordInput from "../../components/PasswordInput";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -54,6 +56,7 @@ const Login = () => {
 
       // Save User Details
       localStorage.setItem("user", JSON.stringify(response.user));
+      setUser(response.user);
       // Show success message
       setSuccessMessage(response.message);
 

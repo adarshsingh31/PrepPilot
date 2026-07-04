@@ -36,10 +36,18 @@ function Landing() {
       <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100">
         <nav className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">P</span>
+            <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+              <span
+                className="material-symbols-outlined text-white"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                rocket_launch
+              </span>
             </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">PrepPilot</span>
+            <div className="text-left">
+              <h1 className="text-lg font-bold text-primary leading-none tracking-tight">PrepPilot</h1>
+              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest">AI Career Coach</p>
+            </div>
           </div>
           
           <div className="hidden md:flex items-center gap-8">

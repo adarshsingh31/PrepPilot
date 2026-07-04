@@ -45,14 +45,22 @@ const AuthLayout = ({ children }) => {
             {/* Logo */}
             <div className="flex items-center gap-3 mb-8">
               <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                  <span className="material-symbols-outlined text-on-primary text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                    psychology
+                <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center shrink-0">
+                  <span
+                    className="material-symbols-outlined text-white"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    rocket_launch
                   </span>
                 </div>
-                <span className="text-2xl font-bold text-on-surface tracking-tight">
-                  PrepPilot
-                </span>
+                <div className="text-left">
+                  <h1 className="text-headline-sm font-bold text-primary tracking-tight whitespace-nowrap leading-none">
+                    PrepPilot
+                  </h1>
+                  <p className="text-[10px] font-semibold text-secondary-fixed-dim uppercase tracking-widest whitespace-nowrap">
+                    AI Career Coach
+                  </p>
+                </div>
               </Link>
             </div>
 
@@ -147,12 +155,18 @@ const AuthLayout = ({ children }) => {
           {/* Mobile Logo */}
           <div className="md:hidden mb-8 flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  psychology
+              <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center shrink-0">
+                <span
+                  className="material-symbols-outlined text-white"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  rocket_launch
                 </span>
               </div>
-              <span className="text-xl font-bold text-on-surface tracking-tight">PrepPilot</span>
+              <div className="text-left">
+                <h1 className="text-lg font-bold text-primary tracking-tight whitespace-nowrap leading-none">PrepPilot</h1>
+                <p className="text-[10px] font-semibold text-secondary-fixed-dim uppercase tracking-widest whitespace-nowrap">AI Career Coach</p>
+              </div>
             </Link>
           </div>
 

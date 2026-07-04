@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useState, useRef } from "react";
 import { useSidebar } from "./SidebarContext";
 /* ─── nav items ─────────────────────────────────────────────────────────── */
@@ -78,6 +79,7 @@ function NavItem({ to, icon, label, fill, collapsed }) {
 
 /* ─── AppLayout ─────────────────────────────────────────────────────── */
 export default function AppLayout({ children }) {
+  const { user } = useAuth();
   const {
     isSidebarOpen,
     isMobileOpen,
@@ -88,13 +90,18 @@ export default function AppLayout({ children }) {
   } = useSidebar();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const user = JSON.parse(localStorage.getItem("user"));
+
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const overlayRef = useRef(null);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+
     navigate("/login");
   };
   const sidebarWidth = collapsed ? "w-20" : "w-72";
