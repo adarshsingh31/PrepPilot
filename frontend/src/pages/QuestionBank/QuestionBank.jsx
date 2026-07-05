@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
 import { getQuestions } from "../../services/questionService";
+import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
 
 function QuestionBank() {
   const [questions, setQuestions] = useState([]);
@@ -22,19 +23,12 @@ function QuestionBank() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Local Storage for User Progress (Practice Status, Bookmarks, Notes)
-  const [userProgress, setUserProgress] = useState(() => {
-    try {
-      const saved = localStorage.getItem("question_progress");
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
+  // State for User Progress (fetched from MERN backend)
+  const [userProgress, setUserProgress] = useState({});
 
-  useEffect(() => {
-    localStorage.setItem("question_progress", JSON.stringify(userProgress));
-  }, [userProgress]);
+  // Notes Modal state
+  const [editingNoteQuestionId, setEditingNoteQuestionId] = useState(null);
+  const [noteText, setNoteText] = useState("");
 
   const topics = [
     "All Topics",
@@ -69,18 +63,31 @@ function QuestionBank() {
         params.search = searchQuery.trim();
       }
 
-      const response = await getQuestions(params);
-      if (response.success) {
-        setQuestions(response.questions);
+      // Fetch questions and user progress in parallel
+      const [questionsResponse, progressResponse] = await Promise.all([
+        getQuestions(params),
+        getUserQuestions()
+      ]);
+
+      if (questionsResponse.success && progressResponse.success) {
+        setQuestions(questionsResponse.questions);
+        
+        // Convert progress array to a map: questionId -> progressObject
+        const progressMap = {};
+        progressResponse.userQuestions.forEach((item) => {
+          progressMap[item.question] = item;
+        });
+        setUserProgress(progressMap);
+
         if (selectedTopic === "All Topics" && selectedDifficulty === "All Difficulties" && selectedImportance === "All Importances" && !searchQuery.trim()) {
-          setTotalQuestionsCount(response.questions.length);
+          setTotalQuestionsCount(questionsResponse.questions.length);
         }
       } else {
-        setError("Failed to load questions");
+        setError("Failed to load questions or progress");
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || "An error occurred while fetching questions");
+      setError(err.message || "An error occurred while fetching data");
     } finally {
       setLoading(false);
     }
@@ -100,34 +107,116 @@ function QuestionBank() {
   }, [selectedTopic, selectedDifficulty, selectedImportance, searchQuery, sortBy]);
 
   // Actions
-  const toggleSaved = (id) => {
-    setUserProgress(prev => {
-      const current = prev[id]?.status;
-      const nextStatus = current === "Saved" ? "Not Practiced" : "Saved";
-      return {
+  const toggleSaved = async (id) => {
+    try {
+      const currentBookmarked = getQuestionBookmarked(id);
+      const nextBookmarked = !currentBookmarked;
+
+      // Optimistic Update
+      setUserProgress(prev => ({
         ...prev,
-        [id]: { ...prev[id], status: nextStatus }
-      };
-    });
+        [id]: {
+          ...prev[id],
+          question: id,
+          bookmarked: nextBookmarked
+        }
+      }));
+
+      // Call API
+      const response = await updateUserQuestion(id, { bookmarked: nextBookmarked });
+      if (response.success && response.userQuestion) {
+        setUserProgress(prev => ({
+          ...prev,
+          [id]: response.userQuestion
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update bookmark", err);
+      fetchQuestions(); // Sync back in case of error
+    }
   };
 
-  const togglePracticed = (id) => {
-    setUserProgress(prev => {
-      const current = prev[id]?.status;
-      const nextStatus = current === "Practiced" ? "Not Practiced" : "Practiced";
-      return {
+  const togglePracticed = async (id) => {
+    try {
+      const currentStatus = getQuestionStatus(id);
+      const nextStatus = currentStatus === "Practiced" ? "Not Started" : "Practiced";
+
+      // Optimistic Update
+      setUserProgress(prev => ({
         ...prev,
-        [id]: { ...prev[id], status: nextStatus }
-      };
-    });
+        [id]: {
+          ...prev[id],
+          question: id,
+          status: nextStatus
+        }
+      }));
+
+      // Call API
+      const response = await updateUserQuestion(id, { status: nextStatus });
+      if (response.success && response.userQuestion) {
+        setUserProgress(prev => ({
+          ...prev,
+          [id]: response.userQuestion
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update status", err);
+      fetchQuestions();
+    }
   };
 
-  const clearStatus = (id) => {
-    setUserProgress(prev => {
-      const updated = { ...prev };
-      delete updated[id];
-      return updated;
-    });
+  const handleSaveNote = async (id, text) => {
+    try {
+      // Optimistic Update
+      setUserProgress(prev => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          question: id,
+          notes: text
+        }
+      }));
+      setEditingNoteQuestionId(null);
+
+      // Call API
+      const response = await updateUserQuestion(id, { notes: text });
+      if (response.success && response.userQuestion) {
+        setUserProgress(prev => ({
+          ...prev,
+          [id]: response.userQuestion
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to save note", err);
+      fetchQuestions();
+    }
+  };
+
+  const clearStatus = async (id) => {
+    try {
+      // Optimistic Update
+      setUserProgress(prev => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+
+      // Call API to reset status, bookmark, and notes
+      const response = await updateUserQuestion(id, {
+        status: "Not Started",
+        bookmarked: false,
+        notes: ""
+      });
+      if (response.success && response.userQuestion) {
+        setUserProgress(prev => ({
+          ...prev,
+          [id]: response.userQuestion
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to clear status", err);
+      fetchQuestions();
+    }
   };
 
   const handleReset = () => {
@@ -138,11 +227,20 @@ function QuestionBank() {
     setSortBy("Latest");
   };
 
-  // Helper functions for status
+  // Helper functions for reading progress mapping
   const getQuestionStatus = (id) => {
-    return userProgress[id]?.status || "Not Practiced";
+    return userProgress[id]?.status || "Not Started";
   };
 
+  const getQuestionBookmarked = (id) => {
+    return userProgress[id]?.bookmarked || false;
+  };
+
+  const getQuestionNotes = (id) => {
+    return userProgress[id]?.notes || "";
+  };
+
+  // Sorting
   const difficultyOrder = { Easy: 1, Medium: 2, Hard: 3 };
   const importanceOrder = { High: 3, Medium: 2, Low: 1 };
 
@@ -160,7 +258,7 @@ function QuestionBank() {
       const impB = importanceOrder[b.importance] || 0;
       return impB - impA; // High to Low
     }
-    // Default: "Latest" (compare Mongo DB object ID string timestamps in descending order)
+    // Default: "Latest" (compare MongoDB ObjectID strings in descending order)
     if (a._id && b._id) {
       return b._id.toString().localeCompare(a._id.toString());
     }
@@ -174,8 +272,8 @@ function QuestionBank() {
 
   // Stats Calculations
   const practicedCount = Object.values(userProgress).filter(p => p.status === "Practiced").length;
-  const savedCount = Object.values(userProgress).filter(p => p.status === "Saved").length;
-  const notesCount = Object.values(userProgress).filter(p => p.notes).length;
+  const savedCount = Object.values(userProgress).filter(p => p.bookmarked).length;
+  const notesCount = Object.values(userProgress).filter(p => p.notes && p.notes.trim() !== "").length;
 
   return (
     <AppLayout>
@@ -348,33 +446,20 @@ function QuestionBank() {
                       ) : (
                         paginatedQuestions.map((q, idx) => {
                           const status = getQuestionStatus(q._id);
+                          const isBookmarked = getQuestionBookmarked(q._id);
                           return (
                             <tr key={q._id} className="hover:bg-primary-container/5 transition-colors group cursor-pointer">
                               <td className="px-6 py-4 text-center text-on-surface-variant">{startIndex + idx + 1}</td>
                               <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <a
-                                    href={q.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="font-bold text-on-surface group-hover:text-primary transition-colors hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {q.title}
-                                  </a>
-                                  <span
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleSaved(q._id);
-                                    }}
-                                    className={`material-symbols-outlined text-sm cursor-pointer transition-colors ${
-                                      status === "Saved" ? "text-primary" : "text-outline hover:text-primary"
-                                    }`}
-                                    style={{ fontVariationSettings: status === "Saved" ? "'FILL' 1" : "'FILL' 0" }}
-                                  >
-                                    bookmark
-                                  </span>
-                                </div>
+                                <a
+                                  href={q.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-bold text-on-surface group-hover:text-primary transition-colors hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {q.title}
+                                </a>
                               </td>
                               <td className="px-6 py-4 text-on-surface-variant">{q.topic}</td>
                               <td className="px-6 py-4">
@@ -397,18 +482,18 @@ function QuestionBank() {
                                 <span className={`font-bold text-xs flex items-center gap-1 ${
                                   status === "Practiced"
                                     ? "text-emerald-600 dark:text-emerald-400"
-                                    : status === "Saved"
+                                    : (status === "Saved" || isBookmarked)
                                     ? "text-primary"
                                     : "text-on-surface-variant"
                                 }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${
                                     status === "Practiced"
                                       ? "bg-emerald-500"
-                                      : status === "Saved"
+                                      : (status === "Saved" || isBookmarked)
                                       ? "bg-primary"
                                       : "bg-outline"
                                   }`} />
-                                  {status}
+                                  {status === "Practiced" ? "Practiced" : (status === "Saved" || isBookmarked) ? "Saved" : "Not Practiced"}
                                 </span>
                               </td>
                               <td className="px-6 py-4">
@@ -428,13 +513,27 @@ function QuestionBank() {
                                     title="Save Question"
                                     onClick={(e) => { e.stopPropagation(); toggleSaved(q._id); }}
                                     className={`material-symbols-outlined text-lg hover:text-primary cursor-pointer transition-colors ${
-                                      status === "Saved" ? "text-primary" : ""
+                                      isBookmarked ? "text-primary" : ""
                                     }`}
-                                    style={{ fontVariationSettings: status === "Saved" ? "'FILL' 1" : "'FILL' 0" }}
+                                    style={{ fontVariationSettings: isBookmarked ? "'FILL' 1" : "'FILL' 0" }}
                                   >
                                     bookmark
                                   </span>
-                                  {status !== "Not Practiced" && (
+                                  {/* Notes trigger */}
+                                  <span
+                                    title="Edit Note"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingNoteQuestionId(q._id);
+                                      setNoteText(getQuestionNotes(q._id));
+                                    }}
+                                    className={`material-symbols-outlined text-lg hover:text-primary cursor-pointer transition-colors ${
+                                      getQuestionNotes(q._id) ? "text-primary" : ""
+                                    }`}
+                                  >
+                                    edit_note
+                                  </span>
+                                  {(status !== "Not Started" || isBookmarked || getQuestionNotes(q._id)) && (
                                     <span
                                       title="Clear Status"
                                       onClick={(e) => { e.stopPropagation(); clearStatus(q._id); }}
@@ -562,6 +661,47 @@ function QuestionBank() {
           </div>
         </div>
       </div>
+
+      {/* Notes Modal Overlay */}
+      {editingNoteQuestionId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 text-left border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center">
+              <h4 className="font-bold text-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">edit_note</span>
+                Edit Note
+              </h4>
+              <button
+                onClick={() => setEditingNoteQuestionId(null)}
+                className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <textarea
+              rows="4"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Write your note here..."
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingNoteQuestionId(null)}
+                className="px-4 py-2 border border-outline text-on-surface rounded-lg hover:bg-outline-variant/10 text-sm font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSaveNote(editingNoteQuestionId, noteText)}
+                className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all cursor-pointer"
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
