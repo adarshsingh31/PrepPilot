@@ -5,6 +5,7 @@ const {
   getStudyPlans,
   createStudyPlan,
   updateStudyPlan,
+  deleteStudyPlan,
 } = require("../controllers/studyPlanController");
 const protect = require("../middleware/authMiddleware");
 
@@ -12,5 +13,6 @@ const protect = require("../middleware/authMiddleware");
 router.get("/", protect, getStudyPlans);
 router.post("/", protect, createStudyPlan);
 router.put("/:id", protect, updateStudyPlan);
+router.delete("/:id", protect, deleteStudyPlan);
 
 module.exports = router;

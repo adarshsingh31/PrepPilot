@@ -15,3 +15,8 @@ export const updateStudyPlan = async (id, updates) => {
   const response = await api.put(`/study-plans/${id}`, updates);
   return response.data;
 };
+
+export const deleteStudyPlan = async (id) => {
+  const response = await api.delete(`/study-plans/${id}`);
+  return response.data;
+};

@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
-import { getStudyPlans, createStudyPlan, updateStudyPlan } from "../../services/studyPlanService";
+import {
+  getStudyPlans,
+  createStudyPlan,
+  updateStudyPlan,
+  deleteStudyPlan,
+} from "../../services/studyPlanService";
 
 // ─── Create Plan Modal ────────────────────────────────────────────────────────
 function CreatePlanModal({ onClose, onCreate }) {
   const [title, setTitle] = useState("");
   const [targetDate, setTargetDate] = useState("");
+  const [studyPlans, setStudyPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,8 +34,13 @@ function CreatePlanModal({ onClose, onCreate }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-on-surface text-lg">Create Study Plan</h2>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <h2 className="font-bold text-on-surface text-lg">
+            Create Study Plan
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+          >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -64,7 +75,9 @@ function CreatePlanModal({ onClose, onCreate }) {
           </div>
 
           {error && (
-            <p className="text-xs text-error bg-error/10 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-xs text-error bg-error/10 px-3 py-2 rounded-lg">
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3 pt-2">
@@ -106,7 +119,7 @@ function StatusBadge({ status }) {
 function EditPlanModal({ plan, onClose, onUpdate }) {
   const [title, setTitle] = useState(plan.title);
   const [targetDate, setTargetDate] = useState(
-    new Date(plan.targetDate).toISOString().split("T")[0]
+    new Date(plan.targetDate).toISOString().split("T")[0],
   );
   const [status, setStatus] = useState(plan.status);
   const [progress, setProgress] = useState(plan.progress);
@@ -118,7 +131,12 @@ function EditPlanModal({ plan, onClose, onUpdate }) {
     setLoading(true);
     setError("");
     try {
-      await onUpdate(plan._id, { title, targetDate, status, progress: Number(progress) });
+      await onUpdate(plan._id, {
+        title,
+        targetDate,
+        status,
+        progress: Number(progress),
+      });
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to update plan");
@@ -132,7 +150,10 @@ function EditPlanModal({ plan, onClose, onUpdate }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-on-surface text-lg">Edit Study Plan</h2>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface cursor-pointer">
+          <button
+            onClick={onClose}
+            className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+          >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -194,7 +215,9 @@ function EditPlanModal({ plan, onClose, onUpdate }) {
           </div>
 
           {error && (
-            <p className="text-xs text-error bg-error/10 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-xs text-error bg-error/10 px-3 py-2 rounded-lg">
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3 pt-2">
@@ -219,8 +242,73 @@ function EditPlanModal({ plan, onClose, onUpdate }) {
   );
 }
 
+// ─── Delete Confirmation Modal ──────────────────────────────────────────────────
+function DeleteConfirmationModal({ onClose, onConfirm }) {
+  // Listen for Escape key press to close the modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside the content box
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 animate-fade-in"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-on-surface text-lg">
+            Delete Study Plan
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-on-surface-variant hover:text-on-surface cursor-pointer flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <p className="text-sm text-on-surface-variant mb-6">
+          Are you sure you want to delete this study plan?
+          <br />
+          This action cannot be undone.
+        </p>
+
+        <div className="flex gap-3 pt-2">
+          {/* Cancel Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg text-sm font-bold text-on-surface-variant border border-outline-variant hover:bg-surface-container transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          {/* Delete Button */}
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white bg-error hover:bg-error/90 transition cursor-pointer"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Plan Card ────────────────────────────────────────────────────────────────
-function PlanCard({ plan, onEdit }) {
+function PlanCard({ plan, onEdit, onDelete }) {
   const target = new Date(plan.targetDate).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -242,30 +330,38 @@ function PlanCard({ plan, onEdit }) {
           >
             <span className="material-symbols-outlined text-base">edit</span>
           </button>
+          <button
+            onClick={() => onDelete(plan._id)}
+            title="Delete plan"
+            className="text-on-surface-variant/50 hover:text-error transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">delete</span>
+          </button>
         </div>
       </div>
       <p className="text-[11px] text-on-surface-variant uppercase font-bold tracking-tight">
         Study Plan
       </p>
-      <h3 className="text-sm font-bold text-on-surface mt-1 mb-3 line-clamp-2">{plan.title}</h3>
+      <h3 className="text-sm font-bold text-on-surface mt-1 mb-3 line-clamp-2">
+        {plan.title}
+      </h3>
       <div className="flex justify-between items-end mb-1">
-        <span className="text-[11px] font-bold text-primary">{plan.progress}% Completed</span>
-        <span className="text-[10px] text-on-surface-variant">Target: {target}</span>
+        <span className="text-[11px] font-bold text-primary">
+          {plan.progress}% Completed
+        </span>
+        <span className="text-[10px] text-on-surface-variant">
+          Target: {target}
+        </span>
       </div>
       <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-        <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${plan.progress}%` }} />
+        <div
+          className="bg-primary h-full rounded-full transition-all"
+          style={{ width: `${plan.progress}%` }}
+        />
       </div>
     </div>
   );
 }
-
-// ─── Static demo tasks ────────────────────────────────────────────────────────
-const DEMO_TASKS = [
-  { id: 1, title: "Arrays - Two Pointer", desc: "Revise important patterns", done: true },
-  { id: 2, title: "LeetCode - 20 Problems", desc: "Easy - Medium difficulty level", done: true },
-  { id: 3, title: "Dynamic Programming", desc: "Practice DP transition problems", done: false, tag: "3/5" },
-  { id: 4, title: "System Design - Basics", desc: "Read and take notes from DDIA", done: false },
-];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function StudyPlan() {
@@ -274,7 +370,10 @@ function StudyPlan() {
   const [fetchError, setFetchError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null); // plan object being edited
-  const [tasks, setTasks] = useState(DEMO_TASKS);
+
+  // States to handle custom delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
 
   const fetchPlans = async () => {
     setLoadingPlans(true);
@@ -283,7 +382,9 @@ function StudyPlan() {
       const data = await getStudyPlans();
       setPlans(data.studyPlans || []);
     } catch (err) {
-      setFetchError(err?.response?.data?.message || "Failed to load study plans");
+      setFetchError(
+        err?.response?.data?.message || "Failed to load study plans",
+      );
     } finally {
       setLoadingPlans(false);
     }
@@ -303,14 +404,77 @@ function StudyPlan() {
     await fetchPlans();
   };
 
-  const toggleTask = (id) =>
-    setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  // Triggered when clicking the Delete button/icon on a Study Plan card
+  const handleDelete = (id) => {
+    setSelectedPlanId(id);
+    setShowDeleteModal(true);
+  };
+
+  // Called when confirming the deletion within the custom React modal
+  const confirmDelete = async () => {
+    if (!selectedPlanId) return;
+    try {
+      await deleteStudyPlan(selectedPlanId);
+      await fetchPlans(); // Refresh the study plan list
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to delete plan");
+    } finally {
+      // Close the modal and reset state
+      setShowDeleteModal(false);
+      setSelectedPlanId(null);
+    }
+  };
+
+  const toggleTask = async (id, currentStatus) => {
+    const nextStatus = currentStatus === "Active" ? "Completed" : "Active";
+    const nextProgress = nextStatus === "Completed" ? 100 : 0;
+    try {
+      await updateStudyPlan(id, { status: nextStatus, progress: nextProgress });
+      await fetchPlans();
+    } catch (err) {
+      console.error("Failed to toggle study plan task status:", err);
+      alert(err?.response?.data?.message || "Failed to update plan status");
+    }
+  };
+
+  const sortedPlans = [...plans].sort(
+    (a, b) => new Date(a.targetDate) - new Date(b.targetDate),
+  );
+  const firstActiveIndex = sortedPlans.findIndex((p) => p.status === "Active");
+
+  const upcomingMilestones = plans
+    .filter((p) => p.status === "Active")
+    .sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate))
+    .slice(0, 3)
+    .map((p, i) => {
+      const diffTime = new Date(p.targetDate) - new Date();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      let daysStr = "";
+      if (diffDays > 0) {
+        daysStr = `In ${diffDays} day${diffDays > 1 ? "s" : ""}`;
+      } else if (diffDays === 0) {
+        daysStr = "Today";
+      } else {
+        daysStr = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? "s" : ""} overdue`;
+      }
+
+      const icons = ["emoji_events", "star", "rocket_launch"];
+      const colors = ["primary", "tertiary", "secondary"];
+
+      return {
+        _id: p._id,
+        label: p.title,
+        days: daysStr,
+        pct: p.progress,
+        icon: icons[i % icons.length],
+        color: colors[i % colors.length],
+      };
+    });
 
   return (
     <AppLayout>
       <div className="p-4 md:p-8">
         <div className="max-w-container-max mx-auto space-y-6 md:space-y-8">
-
           {/* Header */}
           <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -330,12 +494,14 @@ function StudyPlan() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
             <div className="col-span-1 lg:col-span-8 space-y-6 md:space-y-8">
-
               {/* Plans grid */}
               {loadingPlans ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white p-5 rounded-xl border border-outline-variant/30 shadow-sm animate-pulse">
+                    <div
+                      key={i}
+                      className="bg-white p-5 rounded-xl border border-outline-variant/30 shadow-sm animate-pulse"
+                    >
                       <div className="w-10 h-10 bg-surface-container rounded-lg mb-4" />
                       <div className="h-3 bg-surface-container rounded w-1/2 mb-2" />
                       <div className="h-4 bg-surface-container rounded w-3/4 mb-4" />
@@ -345,7 +511,9 @@ function StudyPlan() {
                 </div>
               ) : fetchError ? (
                 <div className="bg-error/10 text-error text-sm px-4 py-3 rounded-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base">error</span>
+                  <span className="material-symbols-outlined text-base">
+                    error
+                  </span>
                   {fetchError}
                 </div>
               ) : plans.length === 0 ? (
@@ -353,7 +521,9 @@ function StudyPlan() {
                   <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-3 block">
                     menu_book
                   </span>
-                  <h3 className="font-bold text-on-surface mb-1">No study plans yet</h3>
+                  <h3 className="font-bold text-on-surface mb-1">
+                    No study plans yet
+                  </h3>
                   <p className="text-sm text-on-surface-variant mb-4">
                     Create your first plan to start tracking your prep.
                   </p>
@@ -367,36 +537,13 @@ function StudyPlan() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {plans.map((plan) => (
-                    <PlanCard key={plan._id} plan={plan} onEdit={setEditingPlan} />
+                    <PlanCard
+                      key={plan._id}
+                      plan={plan}
+                      onEdit={setEditingPlan}
+                      onDelete={handleDelete}
+                    />
                   ))}
-                  {/* Static extra cards */}
-                  <div className="bg-white p-4 md:p-5 rounded-xl border border-outline-variant/30 shadow-sm">
-                    <div className="mb-4">
-                      <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-2 rounded-lg">
-                        track_changes
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-on-surface-variant uppercase font-bold tracking-tight">Daily Goal</p>
-                    <h3 className="text-sm font-bold text-on-surface mt-1 mb-3">5 Problems</h3>
-                    <div className="flex justify-between items-end mb-1">
-                      <span className="text-[11px] font-bold text-orange-500">3/5 Completed</span>
-                    </div>
-                    <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-orange-500 h-full rounded-full" style={{ width: "60%" }} />
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 md:p-5 rounded-xl border border-outline-variant/30 shadow-sm">
-                    <div className="mb-2">
-                      <span className="material-symbols-outlined text-error bg-error/10 p-2 rounded-lg">
-                        local_fire_department
-                      </span>
-                    </div>
-                    <h3 className="text-3xl font-bold text-on-surface">7 Days</h3>
-                    <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-tight mt-1">
-                      Current Streak
-                    </p>
-                    <p className="text-[10px] text-on-surface-variant mt-4">Keep it up! 🔥</p>
-                  </div>
                 </div>
               )}
 
@@ -406,7 +553,12 @@ function StudyPlan() {
                   <div>
                     <h3 className="font-bold text-on-surface">Today's Plan</h3>
                     <p className="text-[11px] text-on-surface-variant font-medium">
-                      {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                      {new Date().toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
                     </p>
                   </div>
                   <button className="text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors border border-primary/20">
@@ -414,105 +566,144 @@ function StudyPlan() {
                   </button>
                 </div>
                 <div className="divide-y divide-outline-variant/20">
-                  {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-surface-container-low/30 transition-colors"
-                    >
-                      <button
-                        onClick={() => toggleTask(task.id)}
-                        className={`w-6 h-6 border-2 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                          task.done ? "border-tertiary bg-tertiary/10" : "border-outline-variant"
-                        }`}
+                  {plans.length === 0 ? (
+                    <p className="text-sm text-on-surface-variant p-6 text-center">
+                      No tasks for today. Create a study plan to get started!
+                    </p>
+                  ) : (
+                    plans.map((plan) => (
+                      <div
+                        key={plan._id}
+                        className="px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-surface-container-low/30 transition-colors"
                       >
-                        {task.done && (
-                          <span className="material-symbols-outlined text-tertiary text-lg">check</span>
-                        )}
-                      </button>
-                      <div className="flex-1">
-                        <h4
-                          className={`text-sm font-bold ${
-                            task.done ? "text-on-surface-variant line-through" : "text-on-surface"
+                        <button
+                          onClick={() => toggleTask(plan._id, plan.status)}
+                          className={`w-6 h-6 border-2 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                            plan.status === "Completed"
+                              ? "border-tertiary bg-tertiary/10"
+                              : "border-outline-variant"
                           }`}
                         >
-                          {task.title}
-                        </h4>
-                        <p className="text-xs text-on-surface-variant">{task.desc}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {task.done ? (
-                          <span className="text-[10px] font-bold text-tertiary bg-tertiary/10 px-2 py-1 rounded">Done</span>
-                        ) : task.tag ? (
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">{task.tag}</span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded">
-                            Pending
-                          </span>
-                        )}
-                        <button className="text-on-surface-variant/40 hover:text-on-surface-variant cursor-pointer">
-                          <span className="material-symbols-outlined">more_vert</span>
+                          {plan.status === "Completed" && (
+                            <span className="material-symbols-outlined text-tertiary text-lg">
+                              check
+                            </span>
+                          )}
                         </button>
+                        <div className="flex-1">
+                          <h4
+                            className={`text-sm font-bold ${
+                              plan.status === "Completed"
+                                ? "text-on-surface-variant line-through"
+                                : "text-on-surface"
+                            }`}
+                          >
+                            {plan.title}
+                          </h4>
+                          <p className="text-xs text-on-surface-variant">
+                            Target Date: {new Date(plan.targetDate).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {plan.status === "Completed" ? (
+                            <span className="text-[10px] font-bold text-tertiary bg-tertiary/10 px-2 py-1 rounded">
+                              Done
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                              {plan.progress}% Completed
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
               {/* Plan Timeline */}
               <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm p-4 md:p-6">
-                <h3 className="font-bold text-on-surface mb-6">Plan Timeline</h3>
-                <div className="relative space-y-0">
-                  <div className="absolute left-3.5 top-2 bottom-2 w-0.5 bg-outline-variant/30" />
-                  {[
-                    { dates: "May 27 - Jun 2", label: "Week 1: Fundamentals", score: "18/35", done: true },
-                    { dates: "Jun 3 - Jun 9", label: "Week 2: Advanced Data Structures", score: "0/35", current: true },
-                    { dates: "Jun 10 - Jun 16", label: "Week 3: Algorithms", score: "0/35" },
-                    { dates: "Jun 17 - Jun 23", label: "Week 4: Dynamic Programming", score: "0/35" },
-                    { dates: "Jun 24 - Jun 30", label: "Week 5: System Design", score: "0/35" },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className={`relative flex items-center justify-between pb-8 last:pb-0 pl-10 ${
-                        !item.done && !item.current ? "opacity-60" : ""
-                      }`}
-                    >
-                      <div
-                        className={`absolute left-2.5 top-1.5 w-2.5 h-2.5 rounded-full ring-4 ${
-                          item.done
-                            ? "bg-tertiary ring-tertiary/20"
-                            : item.current
-                            ? "bg-primary ring-primary/20"
-                            : "bg-outline-variant ring-surface-container"
-                        }`}
-                      />
-                      {item.current ? (
-                        <div className="bg-primary/5 p-3 rounded-lg w-full mr-12 -ml-2">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <h4 className="text-sm font-bold text-primary">{item.dates}</h4>
-                            <span className="text-[9px] uppercase font-bold bg-primary text-white px-1.5 py-0.5 rounded">
-                              Current
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-on-surface-variant font-medium">{item.label}</p>
+                <h3 className="font-bold text-on-surface mb-6">
+                  Plan Timeline
+                </h3>
+                {plans.length === 0 ? (
+                  <p className="text-sm text-on-surface-variant text-center py-4">
+                    Create study plans to build a timeline.
+                  </p>
+                ) : (
+                  <div className="relative space-y-0">
+                    <div className="absolute left-3.5 top-2 bottom-2 w-0.5 bg-outline-variant/30" />
+                    {sortedPlans.map((plan, index) => {
+                      const isCompleted = plan.status === "Completed";
+                      const isCurrent = index === firstActiveIndex;
+                      const formattedDate = new Date(plan.targetDate).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      });
+
+                      return (
+                        <div
+                          key={plan._id}
+                          className={`relative flex items-center justify-between pb-8 last:pb-0 pl-10 ${
+                            !isCompleted && !isCurrent ? "opacity-60" : ""
+                          }`}
+                        >
+                          <div
+                            className={`absolute left-2.5 top-1.5 w-2.5 h-2.5 rounded-full ring-4 ${
+                              isCompleted
+                                ? "bg-tertiary ring-tertiary/20"
+                                : isCurrent
+                                  ? "bg-primary ring-primary/20"
+                                  : "bg-outline-variant ring-surface-container"
+                            }`}
+                          />
+                          {isCurrent ? (
+                            <div className="bg-primary/5 p-3 rounded-lg w-full mr-12 -ml-2">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <h4 className="text-sm font-bold text-primary">
+                                  {formattedDate}
+                                </h4>
+                                <span className="text-[9px] uppercase font-bold bg-primary text-white px-1.5 py-0.5 rounded">
+                                  Current
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-on-surface-variant font-medium">
+                                {plan.title}
+                              </p>
+                            </div>
+                          ) : (
+                            <div>
+                              <h4
+                                className={`text-sm font-bold ${isCompleted ? "text-on-surface" : "text-on-surface-variant"}`}
+                              >
+                                {formattedDate}
+                              </h4>
+                              <p className="text-[11px] text-on-surface-variant font-medium">
+                                {plan.title}
+                              </p>
+                            </div>
+                          )}
+                          <span
+                            className={`text-sm font-bold absolute right-0 top-1.5 ${
+                              isCompleted
+                                ? "text-tertiary"
+                                : isCurrent
+                                  ? "text-primary"
+                                  : "text-on-surface-variant"
+                            }`}
+                          >
+                            {plan.progress}%
+                          </span>
                         </div>
-                      ) : (
-                        <div>
-                          <h4 className={`text-sm font-bold ${item.done ? "text-on-surface" : "text-on-surface-variant"}`}>
-                            {item.dates}
-                          </h4>
-                          <p className="text-[11px] text-on-surface-variant font-medium">{item.label}</p>
-                        </div>
-                      )}
-                      <span
-                        className={`text-sm font-bold absolute right-0 top-1.5 ${
-                          item.done ? "text-tertiary" : item.current ? "text-primary" : "text-on-surface-variant"
-                        }`}
-                      >
-                        {item.score}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -520,69 +711,101 @@ function StudyPlan() {
             <aside className="col-span-1 lg:col-span-4 space-y-6">
               <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between">
-                  <h3 className="font-bold text-on-surface text-sm">Upcoming Milestones</h3>
+                  <h3 className="font-bold text-on-surface text-sm">
+                    Upcoming Milestones
+                  </h3>
                   <button className="text-on-surface-variant hover:text-on-surface cursor-pointer">
-                    <span className="material-symbols-outlined">more_horiz</span>
+                    <span className="material-symbols-outlined">
+                      more_horiz
+                    </span>
                   </button>
                 </div>
                 <div className="p-4 md:p-6 space-y-6">
-                  {[
-                    { icon: "emoji_events", label: "Complete 100 Problems", days: "In 5 days", pct: 80, color: "primary" },
-                    { icon: "star", label: "Finish DP Module", days: "In 12 days", pct: 60, color: "tertiary" },
-                  ].map((m, i) => (
-                    <div key={i}>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-8 h-8 rounded-lg bg-${m.color}/10 flex items-center justify-center`}>
-                          <span className={`material-symbols-outlined text-${m.color} text-xl`}>{m.icon}</span>
+                  {upcomingMilestones.length === 0 ? (
+                    <p className="text-xs text-on-surface-variant text-center py-4">
+                      No upcoming milestones. All caught up! 🎉
+                    </p>
+                  ) : (
+                    upcomingMilestones.map((m) => (
+                      <div key={m._id}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`w-8 h-8 rounded-lg bg-${m.color}/10 flex items-center justify-center`}>
+                            <span className={`material-symbols-outlined text-${m.color} text-xl`}>
+                              {m.icon}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-xs font-bold text-on-surface">
+                              {m.label}
+                            </h4>
+                            <p className="text-[10px] text-on-surface-variant">
+                              {m.days}
+                            </p>
+                          </div>
+                          <span className={`text-[11px] font-bold text-${m.color}`}>
+                            {m.pct}%
+                          </span>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="text-xs font-bold text-on-surface">{m.label}</h4>
-                          <p className="text-[10px] text-on-surface-variant">{m.days}</p>
+                        <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`bg-${m.color} h-full rounded-full`}
+                            style={{ width: `${m.pct}%` }}
+                          />
                         </div>
-                        <span className={`text-[11px] font-bold text-${m.color}`}>{m.pct}%</span>
                       </div>
-                      <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                        <div className={`bg-${m.color} h-full rounded-full`} style={{ width: `${m.pct}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                  <div className="opacity-70 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant text-xl">record_voice_over</span>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-xs font-bold text-on-surface">Mock Interview</h4>
-                      <p className="text-[10px] text-on-surface-variant">In 18 days</p>
-                    </div>
-                    <span className="text-[9px] font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">
-                      Not Started
-                    </span>
-                  </div>
+                    ))
+                  )}
                   <button className="w-full py-2.5 text-xs font-bold text-primary hover:bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-center gap-2 transition-colors">
                     View All Milestones
-                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    <span className="material-symbols-outlined text-sm">
+                      chevron_right
+                    </span>
                   </button>
                 </div>
               </div>
 
               <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm p-4 md:p-6">
-                <h3 className="font-bold text-on-surface text-sm mb-6">Study Stats</h3>
+                <h3 className="font-bold text-on-surface text-sm mb-6">
+                  Study Stats
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     ["Total Plans", plans.length.toString()],
-                    ["Active", plans.filter((p) => p.status === "Active").length.toString()],
-                    ["Completed", plans.filter((p) => p.status === "Completed").length.toString()],
-                    ["Avg Progress", plans.length ? `${Math.round(plans.reduce((s, p) => s + p.progress, 0) / plans.length)}%` : "0%"],
+                    [
+                      "Active",
+                      plans
+                        .filter((p) => p.status === "Active")
+                        .length.toString(),
+                    ],
+                    [
+                      "Completed",
+                      plans
+                        .filter((p) => p.status === "Completed")
+                        .length.toString(),
+                    ],
+                    [
+                      "Avg Progress",
+                      plans.length
+                        ? `${Math.round(plans.reduce((s, p) => s + p.progress, 0) / plans.length)}%`
+                        : "0%",
+                    ],
                   ].map(([l, v]) => (
-                    <div key={l} className="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20">
-                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">{l}</p>
+                    <div
+                      key={l}
+                      className="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20"
+                    >
+                      <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                        {l}
+                      </p>
                       <p className="text-lg font-bold text-on-surface">{v}</p>
                     </div>
                   ))}
                 </div>
                 <button className="w-full mt-6 py-2.5 text-xs font-bold text-primary hover:bg-primary/5 flex items-center justify-center gap-2 transition-colors rounded-lg">
                   View Detailed Analytics
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  <span className="material-symbols-outlined text-sm">
+                    chevron_right
+                  </span>
                 </button>
               </div>
             </aside>
@@ -591,7 +814,10 @@ function StudyPlan() {
       </div>
 
       {showModal && (
-        <CreatePlanModal onClose={() => setShowModal(false)} onCreate={handleCreate} />
+        <CreatePlanModal
+          onClose={() => setShowModal(false)}
+          onCreate={handleCreate}
+        />
       )}
 
       {editingPlan && (
@@ -599,6 +825,17 @@ function StudyPlan() {
           plan={editingPlan}
           onClose={() => setEditingPlan(null)}
           onUpdate={handleUpdate}
+        />
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <DeleteConfirmationModal
+          onClose={() => {
+            setShowDeleteModal(false);
+            setSelectedPlanId(null);
+          }}
+          onConfirm={confirmDelete}
         />
       )}
     </AppLayout>
