@@ -104,6 +104,8 @@ function Progress() {
       )
     : 0;
 
+  const totalInterviews = currentInterviews.length;
+
   const avgScorePrev = prevInterviews.length > 0
     ? Math.round(
         prevInterviews.reduce((sum, i) => sum + (i.overallScore || 0), 0) /
@@ -172,8 +174,8 @@ function Progress() {
     return d >= prevStart && d < prevEnd;
   });
 
-  const latestResumeScore = resumes.length > 0 ? resumes[resumes.length - 1].score : 0;
-  const prevResumeScore = resumes.length > 1 ? resumes[resumes.length - 2].score : 0;
+  const latestResumeScore = currentResumes.length > 0 ? currentResumes[currentResumes.length - 1].score : 0;
+  const prevResumeScore = prevResumes.length > 0 ? prevResumes[prevResumes.length - 1].score : 0;
   
   const resumeImprovement = latestResumeScore - prevResumeScore;
   const resumeTrend = resumeImprovement >= 0 ? `+${resumeImprovement}%` : `${resumeImprovement}%`;
@@ -199,6 +201,38 @@ function Progress() {
   };
 
   const { pathD: resumePathD, points: resumePoints } = getResumeGraphPoints(currentResumes);
+
+  const getResumeLabels = (data) => {
+    if (data.length === 0) return [];
+    const sorted = [...data].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (sorted.length <= 5) {
+      return sorted.map((item) =>
+        new Date(item.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
+      );
+    }
+    const step = (sorted.length - 1) / 4;
+    return [0, 1, 2, 3, 4].map((idx) => {
+      const item = sorted[Math.round(idx * step)];
+      return new Date(item.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    });
+  };
+
+  const resumeLabels = getResumeLabels(currentResumes);
+  
+  const avgResumeScore = currentResumes.length > 0
+    ? Math.round(
+        currentResumes.reduce((sum, r) => sum + (r.score || 0), 0) /
+          currentResumes.length
+      )
+    : 0;
+
+  const avgResumeScoreCy = 90 - (avgResumeScore / 100) * 80;
 
   // ----------------------------------------------------
   // SECTION 1 & 3: CODING PROGRESS CALCULATIONS
@@ -549,14 +583,6 @@ function Progress() {
                       <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full border-2 border-primary-container/40" /><span className="text-xs text-on-surface-variant">Average Score</span></div>
                     </div>
                   </div>
-                  <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="bg-surface-container-low border-none rounded-lg text-xs font-semibold px-3 py-2 outline-none cursor-pointer"
-                  >
-                    <option value="This Week">This Week</option>
-                    <option value="This Month">This Month</option>
-                  </select>
                 </div>
                 <div className="relative h-64 w-full mb-10 px-2 flex items-center justify-center">
                   {interviewPoints.length === 0 ? (
@@ -604,31 +630,42 @@ function Progress() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8 text-left">
                 {/* SECTION 4: RESUME SCORE TREND */}
-                <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm relative flex flex-col justify-between">
+                <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm relative flex flex-col justify-between mb-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h4 className="font-bold">Resume Score Trend</h4>
-                    <select
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      className="text-xs bg-transparent font-semibold border-none outline-none cursor-pointer"
-                    >
-                      <option value="This Week">This Week</option>
-                      <option value="This Month">This Month</option>
-                    </select>
+                    <div>
+                      <h4 className="font-bold">Resume Score Trend</h4>
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-tertiary" /><span className="text-xs text-on-surface-variant">Score</span></div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full border-2 border-tertiary-container/40" /><span className="text-xs text-on-surface-variant">Average Score</span></div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="h-48 w-full relative flex items-center justify-center">
+                  <div className="h-48 w-full relative flex items-center justify-center mb-4">
                     {resumePoints.length === 0 ? (
                       <div className="flex flex-col items-center justify-center text-center gap-2">
                         <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">description</span>
                         <p className="text-xs font-bold text-on-surface-variant/50">No resume history available</p>
                       </div>
                     ) : (
-                      <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                        <path className="text-tertiary" d={resumePathD} fill="none" stroke="currentColor" strokeWidth="2" />
-                        {resumePoints.map(([cx, cy], idx) => (
-                          <circle key={idx} className="fill-white stroke-tertiary stroke-2" cx={cx} cy={cy} r="4" />
-                        ))}
-                      </svg>
+                      <>
+                        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-outline-variant/20" />
+                        <div className="absolute bottom-0 left-0 h-full w-[1px] bg-outline-variant/20" />
+                        <div className="absolute w-full h-full flex flex-col justify-between opacity-10 pointer-events-none">
+                          {[...Array(4)].map((_, i) => <div key={i} className="w-full h-[1px] bg-on-surface-variant" />)}
+                        </div>
+                        <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                          {/* Average line */}
+                          <path className="text-tertiary-container/60" d={`M0,${avgResumeScoreCy} L100,${avgResumeScoreCy}`} fill="none" stroke="currentColor" strokeDasharray="4" strokeWidth="2" />
+                          {/* Score line */}
+                          <path className="text-tertiary" d={resumePathD} fill="none" stroke="currentColor" strokeWidth="3" />
+                          {resumePoints.map(([cx, cy], idx) => (
+                            <circle key={idx} className="fill-tertiary" cx={cx} cy={cy} r="3" />
+                          ))}
+                        </svg>
+                        <div className="absolute -bottom-6 w-full flex justify-between text-[10px] text-on-surface-variant font-medium px-1">
+                          {resumeLabels.map((d, idx) => <span key={idx}>{d}</span>)}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -637,14 +674,6 @@ function Progress() {
                 <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col justify-between">
                   <div className="flex justify-between items-center mb-6">
                     <h4 className="font-bold">Time Spent</h4>
-                    <select
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      className="text-xs bg-transparent font-semibold border-none outline-none cursor-pointer"
-                    >
-                      <option value="This Week">This Week</option>
-                      <option value="This Month">This Month</option>
-                    </select>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="w-24 h-24 relative flex items-center justify-center">
@@ -678,14 +707,6 @@ function Progress() {
               <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                   <h4 className="font-bold">Coding Progress</h4>
-                  <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="text-xs bg-transparent font-semibold border-none outline-none cursor-pointer"
-                  >
-                    <option value="This Week">This Week</option>
-                    <option value="This Month">This Month</option>
-                  </select>
                 </div>
                 <div className="flex flex-col items-center mb-8">
                   {totalSolved === 0 ? (

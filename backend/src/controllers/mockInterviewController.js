@@ -65,6 +65,7 @@ const startInterview = async (req, res) => {
       success: true,
       interviewId: interview._id,
       questions: interview.questions,
+      duration: interview.duration,
     });
   } catch (error) {
     console.error("Start Interview Error:", error);

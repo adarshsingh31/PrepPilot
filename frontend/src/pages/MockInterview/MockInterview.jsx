@@ -89,6 +89,7 @@ function MockInterview() {
           JSON.stringify({
             interviewId: response.interviewId,
             questions: response.questions,
+            duration: response.duration,
           }),
         );
 
@@ -99,6 +100,7 @@ function MockInterview() {
             state: {
               interviewId: response.interviewId,
               questions: response.questions,
+              duration: response.duration,
             },
           });
         }, 500);

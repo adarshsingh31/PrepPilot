@@ -95,8 +95,8 @@ function InterviewSession() {
     }
   };
 
-  const handleFinish = async () => {
-    if (!currentAnswer.trim()) {
+  const handleFinish = async (isAutoSubmit = false) => {
+    if (!currentAnswer.trim() && !isAutoSubmit) {
       toast.error("Please answer the final question before finishing.");
       return;
     }
@@ -110,13 +110,13 @@ function InterviewSession() {
         const answerResponse = await submitAnswer({
           interviewId,
           questionIndex: currentIndex,
-          answer: currentAnswer,
+          answer: currentAnswer.trim() ? currentAnswer : "Time expired. No answer provided.",
         });
 
         if (answerResponse.success) {
           setSubmittedQuestions(prev => new Set(prev).add(currentIndex));
           toast.success(`Score: ${answerResponse.score}/100.`, { duration: 2000 });
-        } else {
+        } else if (!isAutoSubmit) {
           setIsFinishing(false);
           return;
         }
@@ -125,7 +125,7 @@ function InterviewSession() {
       const response = await finishInterview(interviewId);
       if (response.success) {
         sessionStorage.removeItem("activeInterview");
-        toast.success("Interview completed successfully!");
+        toast.success(isAutoSubmit ? "Time's up! Interview completed automatically." : "Interview completed successfully!");
         navigate(`/mock-interview/report/${interviewId}`);
       }
     } catch (error) {
@@ -135,10 +135,47 @@ function InterviewSession() {
     }
   };
 
+  const [timeLeft, setTimeLeft] = useState(() => {
+    return sessionData?.duration ? parseInt(sessionData.duration) * 60 : 30 * 60;
+  });
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (timeLeft <= 0 && !hasAutoSubmitted) {
+      setHasAutoSubmitted(true);
+      if (!isFinishing && !isSubmitting) {
+        handleFinish(true);
+      }
+      return;
+    }
+
+    if (timeLeft > 0) {
+      const timerId = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(timerId);
+    }
+  }, [timeLeft, isFinishing, isSubmitting, hasAutoSubmitted]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const getTimerColor = () => {
+    if (timeLeft > 300) return "text-[#22c55e]";
+    if (timeLeft <= 60) return "text-error";
+    return "text-[#f59e0b]";
+  };
+
+  const timerColorClass = getTimerColor();
+  const isPulsing = timeLeft <= 10 && timeLeft > 0;
+
   if (!questions.length) return null;
 
   const currentQuestion = questions[currentIndex];
-  const progressPercentage = ((currentIndex + 1) / questions.length) * 100;
+  const progressPercentage = (submittedQuestions.size / questions.length) * 100;
   const isLastQuestion = currentIndex === questions.length - 1;
 
   return (
@@ -153,7 +190,11 @@ function InterviewSession() {
                 <h2 className="text-2xl font-extrabold text-on-surface">Active Session</h2>
                 <p className="text-sm font-bold text-primary mt-1">Question {currentIndex + 1} of {questions.length}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-2">
+                <div className={`text-lg font-bold flex items-center gap-1.5 ${timerColorClass} ${isPulsing ? 'animate-pulse' : ''}`}>
+                  <span className="material-symbols-outlined text-xl">timer</span>
+                  {formatTime(timeLeft)}
+                </div>
                 <span className="text-xs font-bold text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-lg">
                   {Math.round(progressPercentage)}% Completed
                 </span>

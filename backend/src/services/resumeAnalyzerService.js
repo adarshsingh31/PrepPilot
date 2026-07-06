@@ -16,10 +16,17 @@ The JSON format must be:
 
 {
   "score": 0,
-  "strengths": [],
-  "improvements": [],
-  "atsTips": [],
-  "missingKeywords": []
+  "summary": "Executive summary of the resume evaluation",
+  "contentScore": 0,
+  "structureScore": 0,
+  "skillsScore": 0,
+  "atsScore": 0,
+  "strengths": ["Strength 1", "Strength 2"],
+  "improvements": ["Improvement 1", "Improvement 2"],
+  "atsTips": ["Tip 1", "Tip 2"],
+  "missingKeywords": ["keyword1", "keyword2"],
+  "skills": ["Skill 1", "Skill 2", "Skill 3"],
+  "finalRecommendation": "Recruiter recommendation advice"
 }
 
 Resume:
