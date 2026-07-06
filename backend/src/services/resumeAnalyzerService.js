@@ -16,10 +16,17 @@ The JSON format must be:
 
 {
   "score": 0,
+  "summary": "",
+  "contentScore": 0,
+  "structureScore": 0,
+  "skillsScore": 0,
+  "atsScore": 0,
   "strengths": [],
   "improvements": [],
   "atsTips": [],
-  "missingKeywords": []
+  "missingKeywords": [],
+  "skills": [],
+  "finalRecommendation": ""
 }
 
 Resume:

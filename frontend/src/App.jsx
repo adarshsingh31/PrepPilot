@@ -10,6 +10,7 @@ import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import MockInterview from "./pages/MockInterview/MockInterview";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer/ResumeAnalyzer";
+import ResumeReport from "./pages/ResumeAnalyzer/ResumeReport";
 import CodingPractice from "./pages/CodingPractice/CodingPractice";
 import Profile from "./pages/Profile/Profile";
 import QuestionBank from "./pages/QuestionBank/QuestionBank";
@@ -37,6 +38,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/mock-interview" element={<MockInterview />} />
               <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+              <Route path="/resume/report" element={<ResumeReport />} />
               <Route path="/coding-practice" element={<CodingPractice />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/question-bank" element={<QuestionBank />} />
