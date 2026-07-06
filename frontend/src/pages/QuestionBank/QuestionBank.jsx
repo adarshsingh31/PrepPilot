@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
 import { getQuestions } from "../../services/questionService";
 import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
+import { getAnalytics } from "../../services/analyticsService";
 
 function QuestionBank() {
   const [questions, setQuestions] = useState([]);
@@ -25,6 +26,7 @@ function QuestionBank() {
 
   // State for User Progress (fetched from MERN backend)
   const [userProgress, setUserProgress] = useState({});
+  const [analytics, setAnalytics] = useState(null);
 
   // Notes Modal state
   const [editingNoteQuestionId, setEditingNoteQuestionId] = useState(null);
@@ -63,10 +65,11 @@ function QuestionBank() {
         params.search = searchQuery.trim();
       }
 
-      // Fetch questions and user progress in parallel
-      const [questionsResponse, progressResponse] = await Promise.all([
+      // Fetch questions, user progress, and analytics in parallel
+      const [questionsResponse, progressResponse, analyticsResponse] = await Promise.all([
         getQuestions(params),
-        getUserQuestions()
+        getUserQuestions(),
+        getAnalytics()
       ]);
 
       if (questionsResponse.success && progressResponse.success) {
@@ -78,6 +81,10 @@ function QuestionBank() {
           progressMap[item.question] = item;
         });
         setUserProgress(progressMap);
+
+        if (analyticsResponse.success) {
+          setAnalytics(analyticsResponse.analytics);
+        }
 
         if (selectedTopic === "All Topics" && selectedDifficulty === "All Difficulties" && selectedImportance === "All Importances" && !searchQuery.trim()) {
           setTotalQuestionsCount(questionsResponse.questions.length);
@@ -121,6 +128,10 @@ function QuestionBank() {
           bookmarked: nextBookmarked
         }
       }));
+      setAnalytics(prev => prev ? {
+        ...prev,
+        savedQuestions: prev.savedQuestions + (nextBookmarked ? 1 : -1)
+      } : prev);
 
       // Call API
       const response = await updateUserQuestion(id, { bookmarked: nextBookmarked });
@@ -150,6 +161,10 @@ function QuestionBank() {
           status: nextStatus
         }
       }));
+      setAnalytics(prev => prev ? {
+        ...prev,
+        practicedQuestions: prev.practicedQuestions + (nextStatus === "Practiced" ? 1 : -1)
+      } : prev);
 
       // Call API
       const response = await updateUserQuestion(id, { status: nextStatus });
@@ -167,6 +182,9 @@ function QuestionBank() {
 
   const handleSaveNote = async (id, text) => {
     try {
+      const hasNote = !!getQuestionNotes(id);
+      const willHaveNote = !!text;
+
       // Optimistic Update
       setUserProgress(prev => ({
         ...prev,
@@ -176,6 +194,12 @@ function QuestionBank() {
           notes: text
         }
       }));
+      if (hasNote !== willHaveNote) {
+        setAnalytics(prev => prev ? {
+          ...prev,
+          notesAdded: prev.notesAdded + (willHaveNote ? 1 : -1)
+        } : prev);
+      }
       setEditingNoteQuestionId(null);
 
       // Call API
@@ -194,11 +218,25 @@ function QuestionBank() {
 
   const clearStatus = async (id) => {
     try {
+      const currentStatus = getQuestionStatus(id);
+      const currentBookmarked = getQuestionBookmarked(id);
+      const currentNotes = getQuestionNotes(id);
+
       // Optimistic Update
       setUserProgress(prev => {
         const updated = { ...prev };
         delete updated[id];
         return updated;
+      });
+
+      setAnalytics(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          practicedQuestions: prev.practicedQuestions - (currentStatus === "Practiced" ? 1 : 0),
+          savedQuestions: prev.savedQuestions - (currentBookmarked ? 1 : 0),
+          notesAdded: prev.notesAdded - (currentNotes ? 1 : 0),
+        };
       });
 
       // Call API to reset status, bookmark, and notes
@@ -271,9 +309,10 @@ function QuestionBank() {
   const paginatedQuestions = sortedQuestions.slice(startIndex, startIndex + itemsPerPage);
 
   // Stats Calculations
-  const practicedCount = Object.values(userProgress).filter(p => p.status === "Practiced").length;
-  const savedCount = Object.values(userProgress).filter(p => p.bookmarked).length;
-  const notesCount = Object.values(userProgress).filter(p => p.notes && p.notes.trim() !== "").length;
+  const practicedCount = analytics?.practicedQuestions || Object.values(userProgress).filter(p => p.status === "Practiced").length;
+  const savedCount = analytics?.savedQuestions || Object.values(userProgress).filter(p => p.bookmarked).length;
+  const notesCount = analytics?.notesAdded || Object.values(userProgress).filter(p => p.notes && p.notes.trim() !== "").length;
+  const globalTotalQuestions = analytics?.totalQuestions || totalQuestionsCount;
 
   return (
     <AppLayout>
@@ -604,7 +643,7 @@ function QuestionBank() {
                 <h3 className="font-bold mb-6 flex items-center gap-2 text-sm"><span className="material-symbols-outlined text-primary text-sm">bolt</span>Quick Stats</h3>
                 <div className="space-y-4">
                   {[
-                    { icon: "analytics", bg: "bg-primary-container/10", color: "text-primary", val: loading ? "-" : totalQuestionsCount, label: "Total Questions" },
+                    { icon: "analytics", bg: "bg-primary-container/10", color: "text-primary", val: loading ? "-" : globalTotalQuestions, label: "Total Questions" },
                     { icon: "task_alt", bg: "bg-emerald-500/10", color: "text-emerald-500", val: practicedCount, label: "Practiced" },
                     { icon: "bookmark", bg: "bg-secondary-container", color: "text-on-secondary-container", val: savedCount, label: "Saved" },
                     { icon: "edit_note", bg: "bg-surface-container-high", color: "text-on-surface-variant", val: notesCount, label: "Notes Added" },
@@ -630,22 +669,22 @@ function QuestionBank() {
                       r="40"
                       stroke="currentColor"
                       strokeDasharray="251.2"
-                      strokeDashoffset={251.2 - (251.2 * (practicedCount || 0)) / (totalQuestionsCount || 1)}
+                      strokeDashoffset={251.2 - (251.2 * (practicedCount || 0)) / (globalTotalQuestions || 1)}
                       strokeWidth="12"
                     />
                   </svg>
                   <div className="absolute text-center">
                     <p className="text-2xl font-bold text-on-surface leading-none">
-                      {Math.round(((practicedCount || 0) / (totalQuestionsCount || 1)) * 100)}%
+                      {Math.round(((practicedCount || 0) / (globalTotalQuestions || 1)) * 100)}%
                     </p>
                     <p className="text-[10px] text-on-surface-variant uppercase font-bold mt-1">Mastery</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   {[
-                    ["emerald-500", "Practiced", `${Math.round(((practicedCount || 0) / (totalQuestionsCount || 1)) * 100)}%`],
-                    ["primary", "Saved", `${Math.round(((savedCount || 0) / (totalQuestionsCount || 1)) * 100)}%`],
-                    ["surface-container-high", "Remaining", `${Math.round((((totalQuestionsCount - practicedCount) || 0) / (totalQuestionsCount || 1)) * 100)}%`]
+                    ["emerald-500", "Practiced", `${Math.round(((practicedCount || 0) / (globalTotalQuestions || 1)) * 100)}%`],
+                    ["primary", "Saved", `${Math.round(((savedCount || 0) / (globalTotalQuestions || 1)) * 100)}%`],
+                    ["surface-container-high", "Remaining", `${Math.round((((globalTotalQuestions - practicedCount) || 0) / (globalTotalQuestions || 1)) * 100)}%`]
                   ].map(([c, l, v]) => (
                     <div key={l} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">

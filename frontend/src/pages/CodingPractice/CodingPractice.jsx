@@ -1,17 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
+import { getAnalytics } from "../../services/analyticsService";
+import { getQuestions } from "../../services/questionService";
 
 function CodingPractice() {
-  const [selectedTopic, setSelectedTopic] = useState("Arrays");
+  const [selectedTopic, setSelectedTopic] = useState("All Topics");
   const [difficultyFilter, setDifficultyFilter] = useState("All Difficulties");
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Newest");
+  const [questions, setQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [showAllTopicsPills, setShowAllTopicsPills] = useState(false);
 
-  const topics = ["Arrays", "Strings", "Linked List", "Stacks", "Queues", "Trees", "Graphs", "DP"];
-  const problems = [
-    { id: 1, title: "Two Sum", difficulty: "Easy", acceptance: "53.21%", tags: ["Array", "Hash Table"] },
-    { id: 2, title: "Add Two Numbers", difficulty: "Medium", acceptance: "42.11%", tags: ["Linked List", "Math"] },
-    { id: 3, title: "Median of Two Sorted Arrays", difficulty: "Hard", acceptance: "29.73%", tags: ["Binary Search"], isHard: true }
-  ];
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await getAnalytics();
+        if (response.success) {
+          setAnalytics(response.analytics);
+        }
+      } catch (err) {
+        console.error("Failed to fetch analytics:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
+  useEffect(() => {
+    const fetchQuestionsData = async () => {
+      setLoadingQuestions(true);
+      try {
+        const params = {};
+        let backendTopic = selectedTopic;
+        if (selectedTopic === "DP") backendTopic = "Dynamic Programming";
+        if (selectedTopic === "Stacks" || selectedTopic === "Queues") backendTopic = "Stacks & Queues";
+        
+        if (selectedTopic !== "All Topics") params.topic = backendTopic;
+        if (difficultyFilter !== "All Difficulties") params.difficulty = difficultyFilter;
+        if (searchQuery.trim()) params.search = searchQuery.trim();
+
+        const response = await getQuestions(params);
+        if (response.success) {
+          setQuestions(response.questions);
+        }
+      } catch (error) {
+        console.error("Failed to fetch questions:", error);
+      } finally {
+        setLoadingQuestions(false);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchQuestionsData();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [selectedTopic, difficultyFilter, searchQuery]);
+
+  const allTopics = ["Arrays", "Strings", "Linked List", "Stacks", "Queues", "Trees", "Graphs", "DP", "Binary Search", "Greedy", "Backtracking"];
+  const displayedTopics = showAllTopicsPills ? allTopics : allTopics.slice(0, 8);
+
+  const completionPct = analytics?.completionPercentage || 0;
+  const practiced = analytics?.practicedQuestions || 0;
+  const easy = analytics?.difficultyStats?.easy || 0;
+  const medium = analytics?.difficultyStats?.medium || 0;
+  const hard = analytics?.difficultyStats?.hard || 0;
+  
+  // Calculate relative heights for difficulty bars (max 28, meaning h-28 = 112px, so map 0-100% of max value to tailwind h- classes)
+  const maxDifficulty = Math.max(easy, medium, hard, 1);
+  const getHClass = (val) => {
+    const p = val / maxDifficulty;
+    if (p === 0) return "h-2";
+    if (p < 0.3) return "h-10";
+    if (p < 0.7) return "h-20";
+    return "h-28";
+  };
 
   return (
     <AppLayout>
@@ -32,10 +100,11 @@ function CodingPractice() {
               <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4 mb-6">
                 <div className="flex-grow min-w-[200px] relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
-                  <input className="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Search problems..." type="text" />
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 outline-none" placeholder="Search problems..." type="text" />
                 </div>
-                <select className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-label-md font-label-md focus:outline-none cursor-pointer">
-                  <option>All Topics</option><option>Arrays</option><option>Strings</option>
+                <select value={selectedTopic} onChange={(e) => setSelectedTopic(e.target.value)} className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-label-md font-label-md focus:outline-none cursor-pointer">
+                  <option value="All Topics">All Topics</option>
+                  {allTopics.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)} className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-label-md font-label-md focus:outline-none cursor-pointer">
                   <option>All Difficulties</option><option>Easy</option><option>Medium</option><option>Hard</option>
@@ -45,13 +114,13 @@ function CodingPractice() {
                 </button>
               </div>
               <div className="flex items-center gap-3 overflow-x-auto pb-2">
-                {topics.map((topic) => (
+                {displayedTopics.map((topic) => (
                   <span key={topic} onClick={() => setSelectedTopic(topic)}
                     className={`px-5 py-1.5 rounded-full text-xs font-bold cursor-pointer transition-all ${selectedTopic === topic ? "bg-primary text-white" : "bg-surface text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary"}`}>
                     {topic}
                   </span>
                 ))}
-                <button className="flex items-center gap-1 text-xs font-bold text-primary ml-2">More <span className="material-symbols-outlined text-sm">expand_more</span></button>
+                <button onClick={() => setShowAllTopicsPills(!showAllTopicsPills)} className="flex items-center gap-1 text-xs font-bold text-primary ml-2 cursor-pointer">{showAllTopicsPills ? "Less" : "More"} <span className="material-symbols-outlined text-sm">{showAllTopicsPills ? "expand_less" : "expand_more"}</span></button>
               </div>
             </div>
 
@@ -61,27 +130,33 @@ function CodingPractice() {
             </div>
 
             <div className="space-y-4">
-              {problems.map((prob) => (
-                <div key={prob.id} className={`bg-surface-container-lowest p-4 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center gap-4 md:gap-6 card-lift premium-shadow ${prob.isHard ? "border-l-4 border-error" : ""}`}>
-                  <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="w-10 h-10 flex items-center justify-center font-bold text-outline bg-surface rounded-lg shrink-0">{prob.id}</div>
-                    <div className="flex-1 text-left">
-                      <h4 className="font-bold text-on-surface text-base md:text-lg hover:text-primary cursor-pointer transition-colors leading-tight">{prob.title}</h4>
-                      <div className="flex flex-wrap gap-2 mt-1.5">
-                        {prob.tags.map((tag) => <span key={tag} className="text-[10px] uppercase font-black px-2 py-0.5 bg-surface-container rounded-md text-on-surface-variant whitespace-nowrap">{tag}</span>)}
+              {loadingQuestions ? (
+                <div className="text-center py-8 text-on-surface-variant font-bold">Loading questions...</div>
+              ) : questions.length === 0 ? (
+                <div className="text-center py-8 text-on-surface-variant font-bold">No problems found.</div>
+              ) : (
+                questions.map((prob, index) => (
+                  <div key={prob._id} className={`bg-surface-container-lowest p-4 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center gap-4 md:gap-6 card-lift premium-shadow ${prob.difficulty === "Hard" ? "border-l-4 border-error" : ""}`}>
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className="w-10 h-10 flex items-center justify-center font-bold text-outline bg-surface rounded-lg shrink-0">{index + 1}</div>
+                      <div className="flex-1 text-left">
+                        <a href={prob.link} target="_blank" rel="noopener noreferrer" className="font-bold text-on-surface text-base md:text-lg hover:text-primary cursor-pointer transition-colors leading-tight block">{prob.title}</a>
+                        <div className="flex flex-wrap gap-2 mt-1.5">
+                          <span className="text-[10px] uppercase font-black px-2 py-0.5 bg-surface-container rounded-md text-on-surface-variant whitespace-nowrap">{prob.topic}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between md:justify-end gap-4 w-full md:w-auto md:flex-1 md:ml-auto">
+                      <div className={`font-bold text-sm w-1/3 md:w-auto md:px-4 ${prob.difficulty === "Easy" ? "text-tertiary-container" : prob.difficulty === "Medium" ? "text-orange-500" : "text-error"}`}>{prob.difficulty}</div>
+                      <div className="text-left md:text-right w-1/3 md:w-auto md:px-4"><p className="text-[10px] text-outline font-bold uppercase">Importance</p><p className="font-bold text-on-surface">{prob.importance}</p></div>
+                      <div className="flex items-center justify-end gap-2 md:gap-4 w-full sm:w-auto mt-2 sm:mt-0 ml-auto md:ml-0">
+                        <button className="p-2 text-outline hover:text-primary transition-colors cursor-pointer shrink-0"><span className="material-symbols-outlined">bookmark</span></button>
+                        <a href={prob.link} target="_blank" rel="noopener noreferrer" className="px-6 md:px-8 py-2 md:py-2.5 bg-primary text-white rounded-xl font-bold hover:shadow-lg transition-all active:scale-95 shrink-0 block text-center">Solve</a>
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between md:justify-end gap-4 w-full md:w-auto md:flex-1 md:ml-auto">
-                    <div className={`font-bold text-sm w-1/3 md:w-auto md:px-4 ${prob.difficulty === "Easy" ? "text-tertiary-container" : prob.difficulty === "Medium" ? "text-orange-500" : "text-error"}`}>{prob.difficulty}</div>
-                    <div className="text-left md:text-right w-1/3 md:w-auto md:px-4"><p className="text-[10px] text-outline font-bold uppercase">Acceptance</p><p className="font-bold text-on-surface">{prob.acceptance}</p></div>
-                    <div className="flex items-center justify-end gap-2 md:gap-4 w-full sm:w-auto mt-2 sm:mt-0 ml-auto md:ml-0">
-                      <button className="p-2 text-outline hover:text-primary transition-colors cursor-pointer shrink-0"><span className="material-symbols-outlined">bookmark</span></button>
-                      <button className="px-6 md:px-8 py-2 md:py-2.5 bg-primary text-white rounded-xl font-bold hover:shadow-lg transition-all active:scale-95 shrink-0">Solve</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <button className="w-full mt-10 py-4 border-2 border-dashed border-outline-variant rounded-2xl text-on-surface-variant font-bold hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2">
@@ -115,14 +190,14 @@ function CodingPractice() {
                 <div className="relative w-28 h-28 shrink-0">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle className="text-surface-container" cx="56" cy="56" fill="transparent" r="48" stroke="currentColor" strokeWidth="8" />
-                    <circle className="text-primary" cx="56" cy="56" fill="transparent" r="48" stroke="currentColor" strokeDasharray="301.6" strokeDashoffset="84" strokeLinecap="round" strokeWidth="8" />
+                    <circle className="text-primary" cx="56" cy="56" fill="transparent" r="48" stroke="currentColor" strokeDasharray="301.6" strokeDashoffset={301.6 - (301.6 * completionPct) / 100} strokeLinecap="round" strokeWidth="8" />
                   </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-black text-on-surface">72%</span><span className="text-[10px] text-outline font-bold uppercase">Solved</span></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-black text-on-surface">{loading ? "-" : `${completionPct}%`}</span><span className="text-[10px] text-outline font-bold uppercase">Solved</span></div>
                 </div>
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-tertiary-fixed rounded-lg flex items-center justify-center text-tertiary"><span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span></div>
-                    <div><p className="text-lg font-black text-on-surface leading-none">84</p><p className="text-[10px] text-outline font-bold uppercase">Solved</p></div>
+                    <div><p className="text-lg font-black text-on-surface leading-none">{loading ? "-" : practiced}</p><p className="text-[10px] text-outline font-bold uppercase">Solved</p></div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600"><span className="material-symbols-outlined text-sm">schedule</span></div>
@@ -138,7 +213,7 @@ function CodingPractice() {
                 <div className="absolute inset-0 flex flex-col justify-between border-b border-outline-variant/30 py-1 pointer-events-none opacity-20">
                   <div className="w-full border-t border-outline-variant" /><div className="w-full border-t border-outline-variant" />
                 </div>
-                {[{label:"Easy",h:"h-28",bg:"bg-tertiary-fixed",hover:"hover:bg-tertiary",val:"120"},{label:"Medium",h:"h-20",bg:"bg-orange-100",hover:"hover:bg-orange-500",val:"86"},{label:"Hard",h:"h-10",bg:"bg-error-container",hover:"hover:bg-error",val:"42"}].map(b => (
+                {[{label:"Easy",h:getHClass(easy),bg:"bg-tertiary-fixed",hover:"hover:bg-tertiary",val:loading ? "-" : easy},{label:"Medium",h:getHClass(medium),bg:"bg-orange-100",hover:"hover:bg-orange-500",val:loading ? "-" : medium},{label:"Hard",h:getHClass(hard),bg:"bg-error-container",hover:"hover:bg-error",val:loading ? "-" : hard}].map(b => (
                   <div key={b.label} className="flex flex-col items-center gap-2 group cursor-pointer">
                     <span className="text-[10px] font-bold text-outline opacity-0 group-hover:opacity-100 transition-opacity">{b.val}</span>
                     <div className={`w-10 ${b.bg} rounded-t-lg transition-all ${b.h} ${b.hover}`} />
@@ -148,29 +223,7 @@ function CodingPractice() {
               </div>
             </div>
 
-            <div className="bg-surface-container-lowest p-6 lg:p-8 rounded-3xl premium-shadow">
-              <div className="flex justify-between items-center mb-6">
-                <h5 className="font-bold text-on-surface">Daily Challenges</h5>
-                <button className="text-[10px] font-black uppercase text-primary tracking-widest hover:underline cursor-pointer">View All</button>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { title: "Two Sum", difficulty: "Easy", xp: 10, icon: "calendar_today", color: "blue" },
-                  { title: "Valid Parentheses", difficulty: "Easy", xp: 10, icon: "fact_check", color: "primary" }
-                ].map((challenge, i) => (
-                  <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${challenge.color === "blue" ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-primary-container/10 text-primary border-primary/10"}`}>
-                      <span className="material-symbols-outlined text-lg">{challenge.icon}</span>
-                    </div>
-                    <div className="flex-grow">
-                      <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{challenge.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5"><span className="text-[9px] font-black uppercase text-tertiary-container">{challenge.difficulty}</span><span className="text-[9px] text-outline font-bold">+{challenge.xp} XP</span></div>
-                    </div>
-                    <button className="px-4 py-1.5 border border-outline-variant rounded-lg text-xs font-bold hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95">Start</button>
-                  </div>
-                ))}
-              </div>
-            </div>
+
 
             <div className="bg-indigo-900 rounded-3xl p-6 lg:p-8 relative overflow-hidden text-white card-lift">
               <div className="relative z-10">

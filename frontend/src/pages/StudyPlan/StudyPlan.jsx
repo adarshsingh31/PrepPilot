@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "../../components/AppLayout";
 import {
   getStudyPlans,
@@ -370,6 +371,9 @@ function StudyPlan() {
   const [fetchError, setFetchError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null); // plan object being edited
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [showAllMilestones, setShowAllMilestones] = useState(false);
+  const navigate = useNavigate();
 
   // States to handle custom delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -445,7 +449,7 @@ function StudyPlan() {
   const upcomingMilestones = plans
     .filter((p) => p.status === "Active")
     .sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate))
-    .slice(0, 3)
+    .slice(0, showAllMilestones ? undefined : 3)
     .map((p, i) => {
       const diffTime = new Date(p.targetDate) - new Date();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -551,9 +555,11 @@ function StudyPlan() {
               <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden">
                 <div className="px-4 md:px-6 py-4 flex justify-between items-center border-b border-outline-variant/20">
                   <div>
-                    <h3 className="font-bold text-on-surface">Today's Plan</h3>
+                    <h3 className="font-bold text-on-surface">
+                      {new Date(selectedDate).toISOString().split("T")[0] === new Date().toISOString().split("T")[0] ? "Today's Plan" : "Plan for"}
+                    </h3>
                     <p className="text-[11px] text-on-surface-variant font-medium">
-                      {new Date().toLocaleDateString("en-IN", {
+                      {new Date(selectedDate).toLocaleDateString("en-IN", {
                         weekday: "long",
                         day: "numeric",
                         month: "long",
@@ -561,17 +567,14 @@ function StudyPlan() {
                       })}
                     </p>
                   </div>
-                  <button className="text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors border border-primary/20">
-                    View Calendar
-                  </button>
                 </div>
                 <div className="divide-y divide-outline-variant/20">
-                  {plans.length === 0 ? (
+                  {plans.filter(p => new Date(p.targetDate).toISOString().split("T")[0] === selectedDate).length === 0 ? (
                     <p className="text-sm text-on-surface-variant p-6 text-center">
-                      No tasks for today. Create a study plan to get started!
+                      No tasks scheduled for this date.
                     </p>
                   ) : (
-                    plans.map((plan) => (
+                    plans.filter(p => new Date(p.targetDate).toISOString().split("T")[0] === selectedDate).map((plan) => (
                       <div
                         key={plan._id}
                         className="px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-surface-container-low/30 transition-colors"
@@ -755,12 +758,14 @@ function StudyPlan() {
                       </div>
                     ))
                   )}
-                  <button className="w-full py-2.5 text-xs font-bold text-primary hover:bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-center gap-2 transition-colors">
-                    View All Milestones
-                    <span className="material-symbols-outlined text-sm">
-                      chevron_right
-                    </span>
-                  </button>
+                  {plans.filter(p => p.status === "Active").length > 3 && (
+                    <button onClick={() => setShowAllMilestones(!showAllMilestones)} className="w-full py-2.5 text-xs font-bold text-primary hover:bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer">
+                      {showAllMilestones ? "Show Less Milestones" : "View All Milestones"}
+                      <span className="material-symbols-outlined text-sm">
+                        {showAllMilestones ? "expand_less" : "chevron_right"}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -801,7 +806,7 @@ function StudyPlan() {
                     </div>
                   ))}
                 </div>
-                <button className="w-full mt-6 py-2.5 text-xs font-bold text-primary hover:bg-primary/5 flex items-center justify-center gap-2 transition-colors rounded-lg">
+                <button onClick={() => navigate("/progress")} className="w-full mt-6 py-2.5 text-xs font-bold text-primary hover:bg-primary/5 flex items-center justify-center gap-2 transition-colors rounded-lg">
                   View Detailed Analytics
                   <span className="material-symbols-outlined text-sm">
                     chevron_right

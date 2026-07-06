@@ -1,6 +1,42 @@
+import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
+import { getAnalytics } from "../../services/analyticsService";
 
 function Progress() {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAllTopics, setShowAllTopics] = useState(false);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await getAnalytics();
+        if (response.success) {
+          setAnalytics(response.analytics);
+        }
+      } catch (err) {
+        console.error("Failed to fetch analytics:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
+
+  const practiced = analytics?.practicedQuestions || 0;
+  const easy = analytics?.difficultyStats?.easy || 0;
+  const medium = analytics?.difficultyStats?.medium || 0;
+  const hard = analytics?.difficultyStats?.hard || 0;
+
+  // Calculate percentages for the circular progress (max 100 per segment)
+  const totalSolvedForDifficulty = easy + medium + hard || 1; // avoid div by 0
+  const easyPct = Math.round((easy / totalSolvedForDifficulty) * 100);
+  const mediumPct = Math.round((medium / totalSolvedForDifficulty) * 100);
+  const hardPct = Math.round((hard / totalSolvedForDifficulty) * 100);
+
+  const topTopics = analytics?.topicStats
+    ? [...analytics.topicStats].sort((a, b) => b.solved - a.solved).slice(0, showAllTopics ? undefined : 3)
+    : [];
   return (
     <AppLayout>
       <div className="p-4 md:p-8">
@@ -24,7 +60,7 @@ function Progress() {
             {[
               { icon: "mic", label: "Mock Interviews", value: "24", sub: "Completed", trend: "+20%", color: "text-primary", bg: "bg-primary/5" },
               { icon: "description", label: "Resume Score", value: "82", sub: "/100 Average", trend: "+12%", color: "text-tertiary", bg: "bg-tertiary-fixed-dim/10" },
-              { icon: "code", label: "Problems Solved", value: "128", sub: "Total Solved", trend: "+28%", color: "text-primary", bg: "bg-primary/5" },
+              { icon: "code", label: "Problems Solved", value: loading ? "-" : practiced, sub: "Total Solved", trend: "+28%", color: "text-primary", bg: "bg-primary/5" },
               { icon: "local_fire_department", label: "Current Streak", value: "7 Days", sub: "Keep it up!", trend: "+2 days", color: "text-primary-container", bg: "bg-primary-container/10", fill: true },
             ].map((m, i) => (
               <div key={i} className="bg-white p-6 rounded-xl border border-outline-variant/30 metric-glow flex flex-col justify-between h-40 group hover:-translate-y-1 transition-transform text-left">
@@ -138,14 +174,14 @@ function Progress() {
                 <div className="flex flex-col items-center mb-8">
                   <div className="w-32 h-32 relative flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <circle className="stroke-tertiary-fixed-dim" cx="18" cy="18" fill="none" r="16" strokeDasharray="50, 100" strokeLinecap="round" strokeWidth="4" />
-                      <circle className="stroke-[#f59e0b]" cx="18" cy="18" fill="none" r="16" strokeDasharray="30, 100" strokeDashoffset="-50" strokeLinecap="round" strokeWidth="4" />
-                      <circle className="stroke-error" cx="18" cy="18" fill="none" r="16" strokeDasharray="15, 100" strokeDashoffset="-80" strokeLinecap="round" strokeWidth="4" />
+                      <circle className="stroke-tertiary-fixed-dim" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${easyPct}, 100`} strokeLinecap="round" strokeWidth="4" />
+                      <circle className="stroke-[#f59e0b]" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${mediumPct}, 100`} strokeDashoffset={`-${easyPct}`} strokeLinecap="round" strokeWidth="4" />
+                      <circle className="stroke-error" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${hardPct}, 100`} strokeDashoffset={`-${easyPct + mediumPct}`} strokeLinecap="round" strokeWidth="4" />
                     </svg>
-                    <div className="absolute text-center"><span className="text-2xl font-bold leading-tight">128</span><span className="block text-[8px] uppercase text-on-surface-variant font-bold tracking-widest">Solved</span></div>
+                    <div className="absolute text-center"><span className="text-2xl font-bold leading-tight">{practiced}</span><span className="block text-[8px] uppercase text-on-surface-variant font-bold tracking-widest">Solved</span></div>
                   </div>
                   <div className="grid grid-cols-3 gap-4 mt-6 w-full text-center">
-                    {[["tertiary-fixed-dim","Easy","120"],["[#f59e0b]","Medium","86"],["error","Hard","42"]].map(([c,l,v],i) => (
+                    {[["tertiary-fixed-dim","Easy",easy],["[#f59e0b]","Medium",medium],["error","Hard",hard]].map(([c,l,v],i) => (
                       <div key={l} className={i===1?"border-x border-outline-variant/30":""}>
                         <div className="flex items-center justify-center gap-1 mb-1"><span className={`w-1.5 h-1.5 rounded-full bg-${c}`} /><span className="text-[10px] text-on-surface-variant">{l}</span></div>
                         <span className="font-bold text-sm">{v}</span>
@@ -155,15 +191,19 @@ function Progress() {
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Top Topics Solved</p>
-                  {[["Arrays","32","80%"],["Dynamic Programming","28","70%"],["Graphs","24","60%"]].map(([topic,count,w]) => (
-                    <div key={topic} className="space-y-2 text-xs">
-                      <div className="flex justify-between mb-1"><span>{topic}</span><span>{count}</span></div>
-                      <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div className="h-full bg-primary" style={{ width: w }} /></div>
+                  {topTopics.length > 0 ? topTopics.map((item) => (
+                    <div key={item.topic} className="space-y-2 text-xs">
+                      <div className="flex justify-between mb-1"><span>{item.topic}</span><span>{item.solved}</span></div>
+                      <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div className="h-full bg-primary" style={{ width: `${Math.round((item.solved / practiced) * 100)}%` }} /></div>
                     </div>
-                  ))}
-                  <button className="w-full text-center text-xs font-bold text-primary mt-4 py-2 hover:bg-primary/5 rounded-lg transition-colors flex items-center justify-center gap-2">
-                    View All Topics <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </button>
+                  )) : (
+                    <p className="text-xs text-on-surface-variant">No topics practiced yet.</p>
+                  )}
+                  {analytics?.topicStats && analytics.topicStats.length > 3 && (
+                    <button onClick={() => setShowAllTopics(!showAllTopics)} className="w-full text-center text-xs font-bold text-primary mt-4 py-2 hover:bg-primary/5 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                      {showAllTopics ? "View Less" : "View All Topics"} <span className="material-symbols-outlined text-sm">{showAllTopics ? "arrow_upward" : "arrow_forward"}</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
