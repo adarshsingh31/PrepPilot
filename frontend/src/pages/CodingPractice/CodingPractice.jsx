@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AppLayout from "../../components/AppLayout";
 import { getAnalytics } from "../../services/analyticsService";
 import { getQuestions } from "../../services/questionService";
+import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
 
 function CodingPractice() {
   const [selectedTopic, setSelectedTopic] = useState("All Topics");
@@ -15,20 +16,35 @@ function CodingPractice() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // User Progress and Notes state
+  const [userProgress, setUserProgress] = useState({});
+  const [editingNoteQuestionId, setEditingNoteQuestionId] = useState(null);
+  const [noteText, setNoteText] = useState("");
+
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getAnalytics();
-        if (response.success) {
-          setAnalytics(response.analytics);
+        const [analyticsRes, progressRes] = await Promise.all([
+          getAnalytics(),
+          getUserQuestions(),
+        ]);
+        if (analyticsRes.success) {
+          setAnalytics(analyticsRes.analytics);
+        }
+        if (progressRes.success) {
+          const progressMap = {};
+          progressRes.userQuestions.forEach((item) => {
+            progressMap[item.question] = item;
+          });
+          setUserProgress(progressMap);
         }
       } catch (err) {
-        console.error("Failed to fetch analytics:", err);
+        console.error("Failed to fetch data:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchAnalytics();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -61,6 +77,74 @@ function CodingPractice() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [selectedTopic, difficultyFilter, searchQuery]);
+
+  const getQuestionBookmarked = (id) => userProgress[id]?.bookmarked || false;
+  const getQuestionNotes = (id) => userProgress[id]?.notes || "";
+
+  const toggleSaved = async (id) => {
+    try {
+      const currentBookmarked = getQuestionBookmarked(id);
+      const nextBookmarked = !currentBookmarked;
+
+      setUserProgress((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          question: id,
+          bookmarked: nextBookmarked,
+        },
+      }));
+      setAnalytics((prev) =>
+        prev
+          ? { ...prev, savedQuestions: prev.savedQuestions + (nextBookmarked ? 1 : -1) }
+          : prev
+      );
+
+      const response = await updateUserQuestion(id, { bookmarked: nextBookmarked });
+      if (response.success && response.userQuestion) {
+        setUserProgress((prev) => ({
+          ...prev,
+          [id]: response.userQuestion,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update bookmark", err);
+    }
+  };
+
+  const handleSaveNote = async (id, text) => {
+    try {
+      const hasNote = !!getQuestionNotes(id);
+      const willHaveNote = !!text;
+
+      setUserProgress((prev) => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          question: id,
+          notes: text,
+        },
+      }));
+      if (hasNote !== willHaveNote) {
+        setAnalytics((prev) =>
+          prev
+            ? { ...prev, notesAdded: prev.notesAdded + (willHaveNote ? 1 : -1) }
+            : prev
+        );
+      }
+      setEditingNoteQuestionId(null);
+
+      const response = await updateUserQuestion(id, { notes: text });
+      if (response.success && response.userQuestion) {
+        setUserProgress((prev) => ({
+          ...prev,
+          [id]: response.userQuestion,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to save note", err);
+    }
+  };
 
   const allTopics = ["Arrays", "Strings", "Linked List", "Stacks", "Queues", "Trees", "Graphs", "DP", "Binary Search", "Greedy", "Backtracking"];
   const displayedTopics = showAllTopicsPills ? allTopics : allTopics.slice(0, 8);
@@ -150,7 +234,38 @@ function CodingPractice() {
                       <div className={`font-bold text-sm w-1/3 md:w-auto md:px-4 ${prob.difficulty === "Easy" ? "text-tertiary-container" : prob.difficulty === "Medium" ? "text-orange-500" : "text-error"}`}>{prob.difficulty}</div>
                       <div className="text-left md:text-right w-1/3 md:w-auto md:px-4"><p className="text-[10px] text-outline font-bold uppercase">Importance</p><p className="font-bold text-on-surface">{prob.importance}</p></div>
                       <div className="flex items-center justify-end gap-2 md:gap-4 w-full sm:w-auto mt-2 sm:mt-0 ml-auto md:ml-0">
-                        <button className="p-2 text-outline hover:text-primary transition-colors cursor-pointer shrink-0"><span className="material-symbols-outlined">bookmark</span></button>
+                        {/* Notes trigger */}
+                        <button
+                          title="Edit Note"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingNoteQuestionId(prob._id);
+                            setNoteText(getQuestionNotes(prob._id));
+                          }}
+                          className={`p-2 hover:text-primary transition-colors cursor-pointer shrink-0 ${
+                            getQuestionNotes(prob._id) ? "text-primary" : "text-outline"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined">edit_note</span>
+                        </button>
+                        {/* Bookmark trigger */}
+                        <button
+                          title="Save Question"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSaved(prob._id);
+                          }}
+                          className={`p-2 hover:text-primary transition-colors cursor-pointer shrink-0 ${
+                            getQuestionBookmarked(prob._id) ? "text-primary" : "text-outline"
+                          }`}
+                        >
+                          <span 
+                            className="material-symbols-outlined" 
+                            style={{ fontVariationSettings: getQuestionBookmarked(prob._id) ? "'FILL' 1" : "'FILL' 0" }}
+                          >
+                            bookmark
+                          </span>
+                        </button>
                         <a href={prob.link} target="_blank" rel="noopener noreferrer" className="px-6 md:px-8 py-2 md:py-2.5 bg-primary text-white rounded-xl font-bold hover:shadow-lg transition-all active:scale-95 shrink-0 block text-center">Solve</a>
                       </div>
                     </div>
@@ -184,7 +299,6 @@ function CodingPractice() {
             <div className="bg-surface-container-lowest p-6 lg:p-8 rounded-3xl premium-shadow">
               <div className="flex justify-between items-center mb-8">
                 <h5 className="font-bold text-on-surface">Your Progress</h5>
-                <select className="text-xs font-bold text-on-surface-variant bg-surface px-2 py-1 rounded-md border-none focus:ring-0 outline-none"><option>This Week</option></select>
               </div>
               <div className="flex items-center gap-8">
                 <div className="relative w-28 h-28 shrink-0">
@@ -198,10 +312,6 @@ function CodingPractice() {
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-tertiary-fixed rounded-lg flex items-center justify-center text-tertiary"><span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span></div>
                     <div><p className="text-lg font-black text-on-surface leading-none">{loading ? "-" : practiced}</p><p className="text-[10px] text-outline font-bold uppercase">Solved</p></div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600"><span className="material-symbols-outlined text-sm">schedule</span></div>
-                    <div><p className="text-lg font-black text-on-surface leading-none">12.5 hrs</p><p className="text-[10px] text-outline font-bold uppercase">Time Spent</p></div>
                   </div>
                 </div>
               </div>
@@ -225,19 +335,51 @@ function CodingPractice() {
 
 
 
-            <div className="bg-indigo-900 rounded-3xl p-6 lg:p-8 relative overflow-hidden text-white card-lift">
-              <div className="relative z-10">
-                <h5 className="text-xl font-headline-sm text-headline-sm mb-2">Stuck on a problem?</h5>
-                <p className="text-primary-fixed text-sm mb-6 max-w-[180px]">Get hints, solutions and editorials to level up.</p>
-                <button className="bg-white text-indigo-900 px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:shadow-xl transition-all">Explore Solutions<span className="material-symbols-outlined text-sm">arrow_forward</span></button>
-              </div>
-              <div className="absolute right-0 bottom-0 w-40 h-40">
-                <img className="w-full h-full object-contain" alt="Stuck Help Illustration" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAInqq_slMvPqIV5dzx7TUFuJptV0V28SJ5UTYdgfi8G_1VCw816rO7O7jkpMLicb8NPNLaQAhIf33c9zufqK8TZMk_qF8KXArUzkLaQr01HjKKlNRtm5oVhkjLl6kid2O9VfwJDEw6CSSoAUH-aiQ2hGdzm5fyCf_C_xuwoiCcFJ7EgfSCWcalKtercQtZ5YaHLAkg5b1Z-DypGkO5CM9lIhI4pHJRCSx-DPnbzAX_IU_JVu9jfXVe6rDeNBszkEX3iLxdZlESS7k" />
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
+
+      {/* Notes Modal Overlay */}
+      {editingNoteQuestionId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 text-left border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center">
+              <h4 className="font-bold text-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">edit_note</span>
+                Edit Note
+              </h4>
+              <button
+                onClick={() => setEditingNoteQuestionId(null)}
+                className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <textarea
+              rows="4"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Write your note here..."
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingNoteQuestionId(null)}
+                className="px-4 py-2 border border-outline text-on-surface rounded-lg hover:bg-outline-variant/10 text-sm font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSaveNote(editingNoteQuestionId, noteText)}
+                className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all cursor-pointer"
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

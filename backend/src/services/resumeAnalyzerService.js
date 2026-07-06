@@ -16,17 +16,10 @@ The JSON format must be:
 
 {
   "score": 0,
-  "summary": "",
-  "contentScore": 0,
-  "structureScore": 0,
-  "skillsScore": 0,
-  "atsScore": 0,
   "strengths": [],
   "improvements": [],
   "atsTips": [],
-  "missingKeywords": [],
-  "skills": [],
-  "finalRecommendation": ""
+  "missingKeywords": []
 }
 
 Resume:
@@ -35,7 +28,7 @@ ${resumeText}
 `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     contents: prompt,
   });
 

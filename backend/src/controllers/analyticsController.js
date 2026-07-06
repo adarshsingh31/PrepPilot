@@ -87,6 +87,7 @@ const getAnalytics = async (req, res) => {
         },
 
         topicStats: topicAnalytics,
+        practicedQuestionsList,
       },
     });
   } catch (error) {

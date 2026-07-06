@@ -8,19 +8,50 @@ const startInterview = async (req, res) => {
   try {
     const { domain, difficulty, duration, mode } = req.body;
 
-    const userId = req.user._id;
+    // Validate request
+    if (!domain || !difficulty || !duration || !mode) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields.",
+      });
+    }
+
+    // Generate AI Questions
     const aiResponse = await generateInterviewQuestions(
       domain,
       difficulty,
       duration,
     );
+
+    // Clean Gemini response
     const cleanedResponse = aiResponse
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
-    const parsedData = JSON.parse(cleanedResponse);
+
+    // Parse AI response
+    let parsedData;
+
+    try {
+      parsedData = JSON.parse(cleanedResponse);
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to parse AI response.",
+      });
+    }
+
+    // Validate AI response
+    if (!parsedData.questions || !Array.isArray(parsedData.questions)) {
+      return res.status(500).json({
+        success: false,
+        message: "Invalid AI response received.",
+      });
+    }
+
+    // Save Interview
     const interview = await Interview.create({
-      user: userId,
+      user: req.user._id,
       domain,
       difficulty,
       duration,
@@ -29,15 +60,27 @@ const startInterview = async (req, res) => {
         question,
       })),
     });
-    res.status(201).json({
+
+    return res.status(201).json({
       success: true,
       interviewId: interview._id,
       questions: interview.questions,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Start Interview Error:", error);
+
+    // Gemini quota exceeded
+    if (error.status === 429) {
+      return res.status(429).json({
+        success: false,
+        message:
+          "Gemini API quota exceeded. Please try again later or use a new API key.",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Internal Server Error",
     });
   }
 };
@@ -125,7 +168,7 @@ const finishInterview = async (req, res) => {
     const overallScore =
       interview.questions.length === 0
         ? 0
-        : Math.round((totalScore / interview.questions.length) * 10);
+        : Math.round(totalScore / interview.questions.length);
 
     // Generate AI Report
     const aiResponse = await generateInterviewReport(
@@ -163,7 +206,7 @@ const finishInterview = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

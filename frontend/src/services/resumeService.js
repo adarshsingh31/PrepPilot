@@ -8,3 +8,8 @@ export const analyzeResume = async (formData) => {
   });
   return response.data;
 };
+
+export const getResumeHistory = async () => {
+  const response = await api.get("/resume/history");
+  return response.data;
+};

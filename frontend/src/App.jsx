@@ -9,6 +9,8 @@ import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import MockInterview from "./pages/MockInterview/MockInterview";
+import InterviewSession from "./pages/MockInterview/InterviewSession";
+import InterviewReport from "./pages/MockInterview/InterviewReport";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer/ResumeAnalyzer";
 import ResumeReport from "./pages/ResumeAnalyzer/ResumeReport";
 import CodingPractice from "./pages/CodingPractice/CodingPractice";
@@ -37,6 +39,8 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/mock-interview" element={<MockInterview />} />
+              <Route path="/mock-interview/session" element={<InterviewSession />} />
+              <Route path="/mock-interview/report/:id" element={<InterviewReport />} />
               <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
               <Route path="/resume/report" element={<ResumeReport />} />
               <Route path="/coding-practice" element={<CodingPractice />} />
