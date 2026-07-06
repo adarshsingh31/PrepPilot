@@ -43,15 +43,21 @@ const interviewSchema = new mongoose.Schema(
 
     questions: [
       {
-        question: String,
+        question: {
+          type: String,
+          required: true,
+        },
+
         answer: {
           type: String,
           default: "",
         },
+
         feedback: {
           type: String,
           default: "",
         },
+
         score: {
           type: Number,
           default: 0,
@@ -64,10 +70,30 @@ const interviewSchema = new mongoose.Schema(
       default: 0,
     },
 
+    strengths: {
+      type: [String],
+      default: [],
+    },
+
+    improvements: {
+      type: [String],
+      default: [],
+    },
+
+    summary: {
+      type: String,
+      default: "",
+    },
+
     status: {
       type: String,
       enum: ["In Progress", "Completed"],
       default: "In Progress",
+    },
+
+    completedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
