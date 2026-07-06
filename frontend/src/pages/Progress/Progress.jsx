@@ -599,7 +599,7 @@ function Progress() {
                       </div>
                       <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                         {/* Average line */}
-                        <path className="text-primary-container/60" d={`M0,${avgScoreCy} L100,${avgScoreCy}`} fill="none" stroke="currentColor" strokeDasharray="4" strokeWidth="2" />
+                        <path className="text-primary-container opacity-60" d={`M0,${avgScoreCy} L100,${avgScoreCy}`} fill="none" stroke="currentColor" strokeDasharray="4" strokeWidth="2" />
                         {/* Score line */}
                         <path className="text-primary" d={interviewPathD} fill="none" stroke="currentColor" strokeWidth="3" />
                         {interviewPoints.map(([cx, cy], i) => (
@@ -655,7 +655,7 @@ function Progress() {
                         </div>
                         <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                           {/* Average line */}
-                          <path className="text-tertiary-container/60" d={`M0,${avgResumeScoreCy} L100,${avgResumeScoreCy}`} fill="none" stroke="currentColor" strokeDasharray="4" strokeWidth="2" />
+                          <path className="text-tertiary-container opacity-60" d={`M0,${avgResumeScoreCy} L100,${avgResumeScoreCy}`} fill="none" stroke="currentColor" strokeDasharray="4" strokeWidth="2" />
                           {/* Score line */}
                           <path className="text-tertiary" d={resumePathD} fill="none" stroke="currentColor" strokeWidth="3" />
                           {resumePoints.map(([cx, cy], idx) => (

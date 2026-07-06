@@ -97,7 +97,7 @@ const getProfile = async (req, res) => {
 // Update Profile
 const updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, phone, college, branch, year, cgpa, location } = req.body;
 
     // Check if email already in use
     if (email) {
@@ -112,7 +112,7 @@ const updateProfile = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { name, email },
+      { name, email, phone, college, branch, year, cgpa, location },
       { new: true },
     ).select("-password");
 

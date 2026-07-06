@@ -27,6 +27,13 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    phone: { type: String, default: "" },
+    college: { type: String, default: "" },
+    branch: { type: String, default: "" },
+    year: { type: String, default: "" },
+    cgpa: { type: String, default: "" },
+    location: { type: String, default: "" },
+
     role: {
       type: String,
       enum: ["user", "admin"],
