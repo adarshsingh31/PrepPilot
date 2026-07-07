@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { SidebarProvider } from "./components/SidebarContext";
@@ -21,6 +22,7 @@ import Settings from "./pages/Settings/Settings";
 import HelpSupport from "./pages/HelpSupport/HelpSupport";
 import StudyPlan from "./pages/StudyPlan/StudyPlan";
 import ProtectedRoute from "./components/ProtectedRoute";
+
 function App() {
   return (
     <Router>
