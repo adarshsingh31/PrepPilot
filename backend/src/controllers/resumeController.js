@@ -1,6 +1,7 @@
 const pdfParse = require("pdf-parse");
 const { analyzeResumeWithAI } = require("../services/resumeAnalyzerService");
 const { updateUserStreak } = require("../utils/streakUtils");
+const { trackUserTime } = require("../utils/timeTracker");
 const analyzeResume = async (req, res) => {
   try {
     // Check if file exists
@@ -10,6 +11,8 @@ const analyzeResume = async (req, res) => {
         message: "Please upload a PDF file",
       });
     }
+
+    const analysisStart = Date.now();
 
     // Extract text from PDF
     const pdfData = await pdfParse(req.file.buffer);
@@ -35,6 +38,10 @@ const analyzeResume = async (req, res) => {
 
     // Update Streak
     await updateUserStreak(req.user._id);
+
+    // Track time spent in resume analyzer (upload to result)
+    const analysisSeconds = Math.round((Date.now() - analysisStart) / 1000);
+    await trackUserTime(req.user._id, "resumeAnalyzer", analysisSeconds);
 
     res.status(200).json({
       success: true,

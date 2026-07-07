@@ -6,6 +6,7 @@ const {
   generateInterviewReport,
 } = require("../services/mockInterviewService");
 const { updateUserStreak } = require("../utils/streakUtils");
+const { trackUserTime } = require("../utils/timeTracker");
 
 const startInterview = async (req, res) => {
   try {
@@ -198,6 +199,12 @@ const finishInterview = async (req, res) => {
     interview.completedAt = new Date();
 
     await interview.save();
+
+    // Track time: actual elapsed vs selected duration, take the minimum
+    const selectedDurationSecs = interview.duration * 60;
+    const elapsedSecs = Math.round((interview.completedAt - interview.createdAt) / 1000);
+    const trackedSecs = Math.min(elapsedSecs, selectedDurationSecs);
+    await trackUserTime(req.user._id, "mockInterview", trackedSecs);
 
     // Update Streak
     await updateUserStreak(req.user.id);

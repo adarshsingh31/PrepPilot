@@ -138,7 +138,53 @@ const getUserStats = async (req, res) => {
   }
 };
 
+const { generateUserMilestones } = require("../utils/milestoneGenerator");
+const { trackUserTime } = require("../utils/timeTracker");
+const UserStatsModel = require("../models/UserStats");
+
+const getMilestones = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const data = await generateUserMilestones(userId);
+
+    res.status(200).json({
+      success: true,
+      ...data
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const trackTime = async (req, res) => {
+  try {
+    const { moduleName, durationSeconds } = req.body;
+    await trackUserTime(req.user._id, moduleName, durationSeconds);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getTimeStats = async (req, res) => {
+  try {
+    let stats = await UserStatsModel.findOne({ user: req.user._id });
+    if (!stats) {
+      stats = { dailyLogs: [], cumulativeTime: {} }; // Default if not tracked yet
+    }
+    res.status(200).json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAnalytics,
   getUserStats,
+  getMilestones,
+  trackTime,
+  getTimeStats,
 };
