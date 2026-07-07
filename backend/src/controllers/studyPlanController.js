@@ -1,4 +1,4 @@
-const StudyPlan = require("../models/studyPlan");
+const StudyPlan = require("../models/StudyPlan");
 
 // Get all study plans for the logged-in user
 const getStudyPlans = async (req, res) => {

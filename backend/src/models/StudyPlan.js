@@ -35,6 +35,6 @@ const studyPlanSchema = new mongoose.Schema(
   },
 );
 
-const StudyPlan = mongoose.model("StudyPlan", studyPlanSchema);
+const StudyPlan = mongoose.models.StudyPlan || mongoose.model("StudyPlan", studyPlanSchema);
 
 module.exports = StudyPlan;
