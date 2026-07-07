@@ -4,8 +4,10 @@ import { getQuestions } from "../../services/questionService";
 import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
 import { getAnalytics } from "../../services/analyticsService";
 import { useUserStats } from "../../context/UserStatsContext";
+import { useTimeTracker } from "../../hooks/useTimeTracker";
 
 function QuestionBank() {
+  useTimeTracker("questionBank");
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

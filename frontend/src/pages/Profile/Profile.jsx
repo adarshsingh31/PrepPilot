@@ -6,6 +6,7 @@ import { getHistory as getInterviewHistory } from "../../services/mockInterviewA
 import { getResumeHistory } from "../../services/resumeService";
 import { useUserStats } from "../../context/UserStatsContext";
 import { updateProfile } from "../../services/authService";
+import { getMilestones } from "../../services/milestoneService";
 import toast from "react-hot-toast";
 
 function Profile() {
@@ -14,6 +15,8 @@ function Profile() {
   const [interviews, setInterviews] = useState([]);
   const [resumes, setResumes] = useState([]);
   const [codingAnalytics, setCodingAnalytics] = useState(null);
+  const [milestonesData, setMilestonesData] = useState({ milestones: [], nextMilestone: null });
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
   const { stats, loading: statsLoading } = useUserStats();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -43,26 +46,42 @@ function Profile() {
   }, [user]);
 
   useEffect(() => {
-    const fetchAllData = async () => {
+    let isMounted = true;
+    const fetchAllData = async (showLoader = false) => {
       try {
-        setLoading(true);
-        const [codingRes, interviewRes, resumeRes] = await Promise.all([
+        if (showLoader) setLoading(true);
+        // Add timestamp to prevent browser caching GET requests
+        const timestamp = new Date().getTime();
+        const [codingRes, interviewRes, resumeRes, milestonesRes] = await Promise.all([
           getAnalytics().catch(() => ({})),
           getInterviewHistory().catch(() => ({})),
           getResumeHistory().catch(() => ({})),
+          getMilestones().catch(() => ({ success: false }))
         ]);
+
+        if (!isMounted) return;
 
         if (codingRes.success) setCodingAnalytics(codingRes.analytics);
         if (interviewRes.success) setInterviews(interviewRes.interviews || []);
         if (resumeRes.success) setResumes(resumeRes.history || []);
+        if (milestonesRes.success) setMilestonesData(milestonesRes);
       } catch (err) {
-        toast.error("Failed to fetch profile metrics");
+        if (isMounted) toast.error("Failed to fetch profile metrics");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    fetchAllData();
-  }, []);
+
+    fetchAllData(true);
+
+    const handleFocus = () => fetchAllData(false);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [stats?.mockInterviews, stats?.problemsSolved, stats?.resumeScore]);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -139,21 +158,13 @@ function Profile() {
     interval = seconds / 60;
     if (interval > 1) return Math.floor(interval) + " mins ago";
     return "Just now";
+    return "Just now";
   };
 
-  const generateAchievements = () => {
-    const ach = [];
-    if (totalInterviews >= 1) ach.push({ id: 1, icon: "military_tech", bg: "bg-indigo-100", color: "text-primary", title: "First Interview", sub: "Completed your first mock", dc: "text-primary" });
-    if (totalInterviews >= 10) ach.push({ id: 2, icon: "military_tech", bg: "bg-indigo-100", color: "text-primary", title: "Interview Pro", sub: "Completed 10 mock interviews", dc: "text-primary" });
-    if (totalInterviews >= 50) ach.push({ id: 3, icon: "military_tech", bg: "bg-indigo-100", color: "text-primary", title: "Interview Master", sub: "Completed 50 mock interviews", dc: "text-primary" });
-    if (problemsSolved >= 50) ach.push({ id: 4, icon: "emoji_events", bg: "bg-emerald-100", color: "text-tertiary", title: "Problem Solver", sub: "Solved 50 coding problems", dc: "text-tertiary" });
-    if (problemsSolved >= 100) ach.push({ id: 5, icon: "emoji_events", bg: "bg-emerald-100", color: "text-tertiary", title: "Code Master", sub: "Solved 100 coding problems", dc: "text-tertiary" });
-    if (latestResumeScore >= 85) ach.push({ id: 6, icon: "stars", bg: "bg-indigo-100", color: "text-primary", title: "Resume Improver", sub: "Scored 85+ on analyzer", dc: "text-primary" });
-    if (currentStreak >= 7) ach.push({ id: 7, icon: "workspace_premium", bg: "bg-orange-100", color: "text-orange-600", title: "Consistent Learner", sub: "Maintained a 7-day streak", dc: "text-orange-600" });
-    return ach;
-  };
-  const achievements = generateAchievements();
-
+  const earnedAchievements = (milestonesData.milestones || []).filter(m => m.earned);
+  const totalAchievementsCount = milestonesData.milestones?.length || 0;
+  const nextMilestone = milestonesData.nextMilestone;
+  
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "User"}`;
 
   if (loading || statsLoading) {
@@ -169,6 +180,43 @@ function Profile() {
   return (
     <AppLayout>
       <div className="p-4 md:p-8 relative">
+        
+        {/* VIEW ALL ACHIEVEMENTS MODAL */}
+        {showAllAchievements && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col card-shadow">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-on-surface">All Achievements</h2>
+                <button onClick={() => setShowAllAchievements(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-outline-variant/30 text-on-surface transition-colors">
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+              <div className="overflow-y-auto custom-scrollbar pr-2 space-y-4 flex-1">
+                {earnedAchievements.map((item) => {
+                  const dateObj = item.earnedDate ? new Date(item.earnedDate) : null;
+                  return (
+                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-outline-variant/30 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
+                      <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{item.icon || "emoji_events"}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-on-surface">{item.title}</h4>
+                        <p className="text-xs text-secondary mt-1">{item.description}</p>
+                      </div>
+                      {dateObj && (
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] text-outline font-medium uppercase mb-0.5">Earned</p>
+                          <p className="text-[10px] font-bold text-on-surface">{dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* EDIT PROFILE MODAL */}
         {isEditing && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -318,20 +366,73 @@ function Profile() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 lg:p-8 border border-outline-variant/30 card-shadow">
+            <div className="bg-white rounded-3xl p-6 lg:p-8 border border-outline-variant/30 card-shadow flex flex-col">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-on-surface">Achievements</h3>
               </div>
-              <div className="space-y-4">
-                {achievements.length > 0 ? (
-                  achievements.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-surface hover:bg-surface-container-low transition-colors cursor-pointer">
-                      <div className={`w-12 h-12 ${item.bg} ${item.color} rounded-full flex items-center justify-center shrink-0`}><span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{item.icon}</span></div>
-                      <div><h4 className="text-sm font-bold text-on-surface">{item.title}</h4><p className="text-[10px] text-secondary">{item.sub}</p></div>
+              
+              {/* Achievement Progress Card */}
+              <div className="mb-6 bg-surface-container-low p-4 rounded-2xl border border-outline-variant/50">
+                <div className="flex justify-between items-end mb-2">
+                  <h4 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                    🏆 Achievements
+                  </h4>
+                  <span className="text-xs font-bold text-primary">{earnedAchievements.length} / {totalAchievementsCount} Unlocked</span>
+                </div>
+                <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden mb-5">
+                  <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((earnedAchievements.length / (totalAchievementsCount || 1)) * 100, 100)}%` }}></div>
+                </div>
+
+                {nextMilestone && (
+                  <>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-2">Next Achievement</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+                        <span>{nextMilestone.icon}</span> {nextMilestone.title}
+                      </p>
+                      <span className="text-xs font-bold text-secondary">{nextMilestone.progress} / {nextMilestone.target}</span>
                     </div>
-                  ))
+                  </>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {earnedAchievements.length > 0 ? (
+                  <>
+                    {earnedAchievements.slice(0, 6).map((item) => {
+                      const dateObj = item.earnedDate ? new Date(item.earnedDate) : null;
+                      return (
+                        <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-surface hover:bg-surface-container-low transition-colors cursor-pointer border border-transparent hover:border-outline-variant/30">
+                          <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{item.icon || "emoji_events"}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-bold text-on-surface">{item.title}</h4>
+                            <p className="text-[10px] text-secondary mt-0.5">{item.description}</p>
+                          </div>
+                          {dateObj && (
+                            <div className="text-right shrink-0 opacity-70">
+                              <p className="text-[10px] font-bold text-on-surface">{dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {earnedAchievements.length > 6 && (
+                      <button 
+                        onClick={() => setShowAllAchievements(true)}
+                        className="w-full mt-2 py-3 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors border border-primary/20"
+                      >
+                        View All Achievements
+                      </button>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-sm text-secondary font-medium py-4">Complete mock interviews and solve problems to unlock achievements!</p>
+                  <div className="text-center py-6">
+                    <p className="text-3xl mb-3">🏆</p>
+                    <p className="text-sm font-bold text-on-surface mb-2">No achievements yet.</p>
+                    <p className="text-xs text-secondary max-w-[250px] mx-auto">Complete interviews, solve coding problems and maintain your streak to unlock achievements.</p>
+                  </div>
                 )}
               </div>
             </div>

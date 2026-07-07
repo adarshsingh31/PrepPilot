@@ -4,8 +4,10 @@ import { getAnalytics } from "../../services/analyticsService";
 import { getQuestions } from "../../services/questionService";
 import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
 import { useUserStats } from "../../context/UserStatsContext";
+import { useTimeTracker } from "../../hooks/useTimeTracker";
 
 function CodingPractice() {
+  useTimeTracker("codingPractice");
   const [selectedTopic, setSelectedTopic] = useState("All Topics");
   const [difficultyFilter, setDifficultyFilter] = useState("All Difficulties");
   const [searchQuery, setSearchQuery] = useState("");

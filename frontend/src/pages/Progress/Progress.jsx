@@ -4,6 +4,8 @@ import { getAnalytics } from "../../services/analyticsService";
 import { getHistory as getInterviewHistory } from "../../services/mockInterviewApi";
 import { getResumeHistory } from "../../services/resumeService";
 import { useUserStats } from "../../context/UserStatsContext";
+import { getMilestones } from "../../services/milestoneService";
+import { getTimeStats } from "../../services/timeService";
 
 function Progress() {
   const [filter, setFilter] = useState("This Month");
@@ -15,34 +17,44 @@ function Progress() {
   const [codingAnalytics, setCodingAnalytics] = useState(null);
   const [interviews, setInterviews] = useState([]);
   const [resumes, setResumes] = useState([]);
+  const [milestonesData, setMilestonesData] = useState({ milestones: [], nextMilestone: null });
+  const [timeStats, setTimeStats] = useState({ dailyLogs: [], cumulativeTime: {} });
 
   useEffect(() => {
+    let isMounted = true;
     const fetchAllData = async () => {
       try {
         setLoading(true);
-        const [codingRes, interviewRes, resumeRes] = await Promise.all([
+        const [codingRes, interviewRes, resumeRes, milestonesRes, timeRes] = await Promise.all([
           getAnalytics(),
           getInterviewHistory(),
           getResumeHistory(),
+          getMilestones().catch(() => ({ success: false })),
+          getTimeStats().catch(() => ({ success: false }))
         ]);
 
-        if (codingRes.success) {
-          setCodingAnalytics(codingRes.analytics);
-        }
-        if (interviewRes.success) {
-          setInterviews(interviewRes.interviews || []);
-        }
-        if (resumeRes.success) {
-          setResumes(resumeRes.history || []);
-        }
+        if (!isMounted) return;
+
+        if (codingRes.success) setCodingAnalytics(codingRes.analytics);
+        if (interviewRes.success) setInterviews(interviewRes.interviews || []);
+        if (resumeRes.success) setResumes(resumeRes.history || []);
+        if (milestonesRes.success) setMilestonesData(milestonesRes);
+        if (timeRes.success) setTimeStats(timeRes.stats);
       } catch (err) {
         console.error("Failed to fetch progress metrics:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     fetchAllData();
-  }, []);
+    
+    const handleFocus = () => fetchAllData();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+    }
+  }, [stats?.mockInterviews, stats?.problemsSolved, stats?.resumeScore]);
 
   // Filter Date Ranges
   const getPeriods = () => {
@@ -329,148 +341,79 @@ function Progress() {
   ];
 
   // ----------------------------------------------------
-  // SECTION 5: TIME SPENT CALCULATIONS
+  // SECTION 5: TIME SPENT CALCULATIONS (Dynamic)
   // ----------------------------------------------------
-  const mockInterviewsTime = currentInterviews.reduce((sum, i) => sum + (i.duration || 0), 0) / 60;
-  const codingTime = (easy * 15 + medium * 30 + hard * 60) / 60;
-  const resumesTime = (currentResumes.length * 5) / 60;
-  const otherTime = (totalSolved + currentInterviews.length) * 2 / 60; // Mock derived other practice
 
-  const interviewHrs = Number(mockInterviewsTime.toFixed(1));
-  const codingHrs = Number(codingTime.toFixed(1));
-  const otherHrs = Number((resumesTime + otherTime).toFixed(1));
-  const totalHrs = Number((interviewHrs + codingHrs + otherHrs).toFixed(1)) || 0.1;
+  const getDateRangeForFilter = () => {
+    const now = new Date();
+    if (filter === "This Week") {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      return weekStart;
+    } else if (filter === "This Month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      return monthStart;
+    }
+    return null; // All Time
+  };
 
-  const interviewPct = Math.round((interviewHrs / totalHrs) * 100) || 0;
-  const codingPct = Math.round((codingHrs / totalHrs) * 100) || 0;
-  const otherPct = Math.round((otherHrs / totalHrs) * 100) || 0;
+  const computeTimeFromLogs = () => {
+    const logs = timeStats?.dailyLogs || [];
+    const cumulative = timeStats?.cumulativeTime || {};
+    
+    if (filter === "All Time") {
+      return {
+        mockInterview: cumulative.mockInterview || 0,
+        codingPractice: cumulative.codingPractice || 0,
+        resumeAnalyzer: cumulative.resumeAnalyzer || 0,
+        studyPlan: cumulative.studyPlan || 0,
+        questionBank: cumulative.questionBank || 0,
+      };
+    }
+
+    const rangeStart = getDateRangeForFilter();
+    const filtered = logs.filter(log => new Date(log.date) >= rangeStart);
+
+    return filtered.reduce((acc, log) => {
+      acc.mockInterview += log.mockInterview || 0;
+      acc.codingPractice += log.codingPractice || 0;
+      acc.resumeAnalyzer += log.resumeAnalyzer || 0;
+      acc.studyPlan += log.studyPlan || 0;
+      acc.questionBank += log.questionBank || 0;
+      return acc;
+    }, { mockInterview: 0, codingPractice: 0, resumeAnalyzer: 0, studyPlan: 0, questionBank: 0 });
+  };
+
+  const formatTime = (totalSeconds) => {
+    if (!totalSeconds || totalSeconds < 60) return "0m";
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  };
+
+  const timeData = computeTimeFromLogs();
+  const totalTimeSeconds = Object.values(timeData).reduce((a, b) => a + b, 0);
+
+  // Calculate percentages for donut chart (ensure minimum 1% for non-zero values)
+  const calcPct = (val) => totalTimeSeconds === 0 ? 0 : Math.round((val / totalTimeSeconds) * 100);
+  const interviewPct = calcPct(timeData.mockInterview);
+  const codingPct = calcPct(timeData.codingPractice);
+  const resumePct = calcPct(timeData.resumeAnalyzer);
+  const studyPct = calcPct(timeData.studyPlan);
+  const questionPct = calcPct(timeData.questionBank);
+  const otherPct = Math.max(0, 100 - interviewPct - codingPct - resumePct - studyPct - questionPct);
+  // We only show 3 colors in the donut (interview, coding, other modules combined)
+  const combinedOtherPct = resumePct + studyPct + questionPct + otherPct;
 
   // ----------------------------------------------------
   // SECTION 6: MILESTONES GENERATION
   // ----------------------------------------------------
-  const getMilestones = () => {
-    const list = [];
-
-    // Interviews milestones
-    if (completedInterviews.length >= 1) {
-      list.push({
-        icon: "emoji_events",
-        bg: "bg-tertiary-fixed-dim/10",
-        color: "text-tertiary",
-        title: "Completed First Mock Interview",
-        sub: new Date(completedInterviews[0].completedAt || completedInterviews[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Keep practicing!",
-        date: new Date(completedInterviews[0].completedAt || completedInterviews[0].createdAt),
-      });
-    }
-    if (completedInterviews.length >= 10) {
-      list.push({
-        icon: "emoji_events",
-        bg: "bg-tertiary-fixed-dim/10",
-        color: "text-tertiary",
-        title: "Completed 10 Mock Interviews",
-        sub: new Date(completedInterviews[9].completedAt || completedInterviews[9].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Great milestone!",
-        date: new Date(completedInterviews[9].completedAt || completedInterviews[9].createdAt),
-      });
-    }
-    if (completedInterviews.length >= 20) {
-      list.push({
-        icon: "emoji_events",
-        bg: "bg-tertiary-fixed-dim/10",
-        color: "text-tertiary",
-        title: "Completed 20 Mock Interviews",
-        sub: new Date(completedInterviews[19].completedAt || completedInterviews[19].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • You are an expert interviewer!",
-        date: new Date(completedInterviews[19].completedAt || completedInterviews[19].createdAt),
-      });
-    }
-
-    // Coding milestones
-    const sortedCoding = [...practicedQuestionsList].sort(
-      (a, b) => new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt)
-    );
-    if (sortedCoding.length >= 1) {
-      list.push({
-        icon: "code",
-        bg: "bg-primary/5",
-        color: "text-primary",
-        title: "Solved First Coding Problem",
-        sub: new Date(sortedCoding[0].updatedAt || sortedCoding[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • The journey begins!",
-        date: new Date(sortedCoding[0].updatedAt || sortedCoding[0].createdAt),
-      });
-    }
-    if (sortedCoding.length >= 10) {
-      list.push({
-        icon: "code",
-        bg: "bg-primary/5",
-        color: "text-primary",
-        title: "Solved 10 Coding Problems",
-        sub: new Date(sortedCoding[9].updatedAt || sortedCoding[9].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Nice job!",
-        date: new Date(sortedCoding[9].updatedAt || sortedCoding[9].createdAt),
-      });
-    }
-    if (sortedCoding.length >= 100) {
-      list.push({
-        icon: "code",
-        bg: "bg-primary/5",
-        color: "text-primary",
-        title: "100 Coding Problems",
-        sub: new Date(sortedCoding[99].updatedAt || sortedCoding[99].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Century club! 💯",
-        date: new Date(sortedCoding[99].updatedAt || sortedCoding[99].createdAt),
-      });
-    }
-
-    // Resume milestones
-    const sortedResumes = [...resumes].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    const resumeAbove85 = sortedResumes.find((r) => r.score > 85);
-    if (resumeAbove85) {
-      list.push({
-        icon: "description",
-        bg: "bg-tertiary-fixed-dim/10",
-        color: "text-tertiary",
-        title: "Resume Score > 85",
-        sub: new Date(resumeAbove85.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Highly competitive resume! 📄",
-        date: new Date(resumeAbove85.createdAt),
-      });
-    }
-    const resumeAbove90 = sortedResumes.find((r) => r.score > 90);
-    if (resumeAbove90) {
-      list.push({
-        icon: "description",
-        bg: "bg-tertiary-fixed-dim/10",
-        color: "text-tertiary",
-        title: "Resume Score > 90",
-        sub: new Date(resumeAbove90.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Elite resume status! 🌟",
-        date: new Date(resumeAbove90.createdAt),
-      });
-    }
-
-    // Streaks milestones
-    if (longestStreak >= 7) {
-      const streakDate = new Date();
-      list.push({
-        icon: "local_fire_department",
-        bg: "bg-[#f59e0b]/10",
-        color: "text-[#f59e0b]",
-        title: "7 Days Streak",
-        sub: streakDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • You're on fire! 🔥",
-        date: streakDate,
-      });
-    }
-    if (longestStreak >= 30) {
-      const streakDate = new Date();
-      list.push({
-        icon: "local_fire_department",
-        bg: "bg-[#f59e0b]/10",
-        color: "text-[#f59e0b]",
-        title: "30 Days Streak",
-        sub: streakDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • Legendary status! 👑",
-        date: streakDate,
-      });
-    }
-
-    return list.sort((a, b) => b.date - a.date);
-  };
-
-  const milestones = getMilestones();
+  const milestones = milestonesData.milestones || [];
+  const nextMilestone = milestonesData.nextMilestone;
 
   // Section 10 - Loading Skeletons
   if (loading || statsLoading) {
@@ -653,17 +596,26 @@ function Progress() {
                     <div className="w-24 h-24 relative flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <circle className="stroke-surface-container" cx="18" cy="18" fill="none" r="16" strokeWidth="3" />
-                        <circle className="stroke-primary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${interviewPct} 100`} strokeLinecap="round" strokeWidth="3" />
-                        <circle className="stroke-tertiary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${codingPct} 100`} strokeDashoffset={`-${interviewPct}`} strokeLinecap="round" strokeWidth="3" />
-                        <circle className="stroke-secondary-container" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${otherPct} 100`} strokeDashoffset={`-${interviewPct + codingPct}`} strokeLinecap="round" strokeWidth="3" />
+                        {totalTimeSeconds > 0 && (
+                          <>
+                            <circle className="stroke-primary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${interviewPct} 100`} strokeLinecap="round" strokeWidth="3" />
+                            <circle className="stroke-tertiary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${codingPct} 100`} strokeDashoffset={`-${interviewPct}`} strokeLinecap="round" strokeWidth="3" />
+                            <circle className="stroke-secondary-container" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${combinedOtherPct} 100`} strokeDashoffset={`-${interviewPct + codingPct}`} strokeLinecap="round" strokeWidth="3" />
+                          </>
+                        )}
                       </svg>
-                      <div className="absolute text-center"><p className="text-lg font-bold leading-none">{totalHrs}</p><p className="text-[10px] text-on-surface-variant font-medium">hrs</p></div>
+                      <div className="absolute text-center">
+                        <p className="text-xs font-bold leading-none">{formatTime(totalTimeSeconds)}</p>
+                        <p className="text-[9px] text-on-surface-variant font-medium">total</p>
+                      </div>
                     </div>
                     <div className="flex-grow space-y-2">
                       {[
-                        ["primary", "Mock Interviews", `${interviewHrs} hrs`],
-                        ["tertiary", "Coding Practice", `${codingHrs} hrs`],
-                        ["secondary-container", "Others", `${otherHrs} hrs`],
+                        ["primary", "Mock Interview", formatTime(timeData.mockInterview)],
+                        ["tertiary", "Coding Practice", formatTime(timeData.codingPractice)],
+                        ["secondary-container", "Resume Analyzer", formatTime(timeData.resumeAnalyzer)],
+                        ["secondary-container", "Study Plan", formatTime(timeData.studyPlan)],
+                        ["secondary-container", "Question Bank", formatTime(timeData.questionBank)],
                       ].map(([c, l, v]) => (
                         <div key={l} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full bg-${c}`} /><span>{l}</span></div>
@@ -734,26 +686,58 @@ function Progress() {
               </div>
 
               {/* SECTION 6: MILESTONES */}
-              <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="font-bold">Milestones</h4>
-                  <span className="material-symbols-outlined text-primary text-lg">workspace_premium</span>
-                </div>
-                <div className="space-y-4 text-xs">
-                  {milestones.length > 0 ? (
-                    milestones.slice(0, 5).map((m, i) => (
-                      <div key={i} className="flex gap-3 animate-fade-in">
-                        <div className={`w-8 h-8 ${m.bg} rounded-lg flex-shrink-0 flex items-center justify-center ${m.color}`}>
-                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>{m.icon}</span>
-                        </div>
-                        <div><p className="font-bold text-on-surface">{m.title}</p><p className="text-[10px] text-on-surface-variant">{m.sub}</p></div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-6 text-on-surface-variant font-semibold">
-                      Complete coding problems, upload resumes, or practice mock interviews to earn milestones!
+              <div className="bg-white p-6 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col gap-6">
+                
+                {/* NEXT MILESTONE CARD */}
+                {nextMilestone && (
+                  <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/50">
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                        <span>{nextMilestone.icon}</span> Next Milestone
+                      </h5>
+                      <span className="text-xs font-bold text-primary">{nextMilestone.progress} / {nextMilestone.target}</span>
                     </div>
-                  )}
+                    <p className="text-xs text-on-surface-variant font-medium mb-3">{nextMilestone.title}</p>
+                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((nextMilestone.progress / nextMilestone.target) * 100, 100)}%` }}></div>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-bold">Milestones</h4>
+                    <span className="material-symbols-outlined text-primary text-lg">workspace_premium</span>
+                  </div>
+                  <div className="space-y-4 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {milestones.length > 0 ? (
+                      milestones.map((m, i) => {
+                        const isEarned = m.earned;
+                        const dateText = isEarned && m.earnedDate 
+                          ? new Date(m.earnedDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                          : "Locked";
+                        
+                        return (
+                          <div key={i} className={`flex gap-3 items-center ${!isEarned ? 'opacity-50 grayscale' : 'animate-fade-in'}`}>
+                            <div className={`w-8 h-8 ${isEarned ? 'bg-primary/10 text-primary' : 'bg-surface-container text-on-surface-variant'} rounded-lg flex-shrink-0 flex items-center justify-center`}>
+                              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>{m.icon || "emoji_events"}</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-bold text-on-surface">{m.title}</p>
+                              <p className="text-[10px] text-on-surface-variant">{m.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-bold text-on-surface-variant">{dateText}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-6 text-on-surface-variant font-semibold">
+                        No milestones unlocked yet. Start practicing to unlock achievements!
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

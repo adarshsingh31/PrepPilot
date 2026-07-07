@@ -29,20 +29,30 @@ function Dashboard() {
   const { stats, loading: statsLoading } = useUserStats();
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    let isMounted = true;
+    const fetchDashboard = async (showLoader = false) => {
       try {
+        if (showLoader) setLoading(true);
         const data = await getDashboard();
-        setDashboardData(data);
+        if (isMounted) setDashboardData(data);
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load dashboard data");
+        if (isMounted) toast.error("Failed to load dashboard data");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    fetchDashboard();
-  }, []);
+    fetchDashboard(true);
+
+    const handleFocus = () => fetchDashboard(false);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [stats?.mockInterviews, stats?.problemsSolved, stats?.resumeScore]);
 
   if (loading || statsLoading) {
     return (

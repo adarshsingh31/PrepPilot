@@ -8,6 +8,7 @@ import {
   deleteStudyPlan,
 } from "../../services/studyPlanService";
 import { useUserStats } from "../../context/UserStatsContext";
+import { useTimeTracker } from "../../hooks/useTimeTracker";
 
 // ─── Create Plan Modal ────────────────────────────────────────────────────────
 function CreatePlanModal({ onClose, onCreate }) {
@@ -367,6 +368,7 @@ function PlanCard({ plan, onEdit, onDelete }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function StudyPlan() {
+  useTimeTracker("studyPlan");
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [fetchError, setFetchError] = useState("");
