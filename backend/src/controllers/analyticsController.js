@@ -1,10 +1,14 @@
 const UserQuestion = require("../models/userQuestion");
 const Question = require("../models/question");
+const User = require("../models/user");
+const Interview = require("../models/interview");
+const Resume = require("../models/Resume");
 
 const getAnalytics = async (req, res) => {
   try {
     // Logged-in user
     const userId = req.user._id;
+    const user = await User.findById(userId);
 
     // Total questions in Question Bank
     const totalQuestions = await Question.countDocuments();
@@ -79,6 +83,9 @@ const getAnalytics = async (req, res) => {
         savedQuestions,
         notesAdded,
         completionPercentage,
+        currentStreak: user?.currentStreak || 0,
+        longestStreak: user?.longestStreak || 0,
+        lastActivityDate: user?.lastActivityDate || null,
 
         difficultyStats: {
           easy: easySolved,
@@ -98,6 +105,40 @@ const getAnalytics = async (req, res) => {
   }
 };
 
+const getUserStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    // Get interviews completed
+    const mockInterviews = await Interview.countDocuments({ user: userId, status: "Completed" });
+
+    // Get latest resume score
+    const resumes = await Resume.find({ user: userId }).sort({ createdAt: -1 }).limit(1);
+    const resumeScore = resumes.length > 0 ? resumes[0].score : 0;
+
+    // Get total problems solved
+    const problemsSolved = await UserQuestion.countDocuments({ user: userId, status: "Practiced" });
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        currentStreak: user?.currentStreak || 0,
+        longestStreak: user?.longestStreak || 0,
+        mockInterviews,
+        resumeScore,
+        problemsSolved
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAnalytics,
+  getUserStats,
 };

@@ -1,11 +1,13 @@
 const Interview = require("../models/interview");
 const Resume = require("../models/Resume");
 const UserQuestion = require("../models/userQuestion");
+const User = require("../models/user");
 const StudyPlan = require("../models/StudyPlan");
 
 const getDashboard = async (req, res) => {
   try {
     const userId = req.user._id;
+    const user = await User.findById(userId);
 
     // 1. Fetch Summary Data
     const interviews = await Interview.find({ user: userId, status: "Completed" }).sort({ createdAt: -1 });
@@ -90,33 +92,10 @@ const getDashboard = async (req, res) => {
     recentActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     const latestActivities = recentActivities.slice(0, 5);
 
-    // 3. Calculate Streak
-    let allDates = recentActivities.map(a => new Date(a.timestamp).setHours(0,0,0,0));
-    const uniqueDates = [...new Set(allDates)].sort((a, b) => b - a);
-    
-    let currentStreak = 0;
-    if (uniqueDates.length > 0) {
-      const today = new Date().setHours(0,0,0,0);
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      let dateToCheck = uniqueDates[0] === today ? today : (uniqueDates[0] === yesterday ? yesterday : null);
-      
-      if (dateToCheck) {
-        currentStreak = 1;
-        let nextExpected = new Date(dateToCheck);
-        nextExpected.setDate(nextExpected.getDate() - 1);
-        
-        for (let i = 1; i < uniqueDates.length; i++) {
-          if (uniqueDates[i] === nextExpected.getTime()) {
-            currentStreak++;
-            nextExpected.setDate(nextExpected.getDate() - 1);
-          } else {
-            break;
-          }
-        }
-      }
-    }
+    // 3. Get Streak
+    let currentStreak = user.currentStreak || 0;
+    let longestStreak = user.longestStreak || 0;
+    let lastActivityDate = user.lastActivityDate || null;
 
     // 4. Generate Motivation Message
     let motivation = {
@@ -147,7 +126,9 @@ const getDashboard = async (req, res) => {
         currentStreak,
         interviewGrowth,
         resumeGrowth,
-        codingGrowth
+        codingGrowth,
+        longestStreak,
+        lastActivityDate
       },
       recentActivities: latestActivities,
       motivation

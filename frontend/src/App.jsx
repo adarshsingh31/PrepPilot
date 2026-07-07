@@ -23,38 +23,42 @@ import HelpSupport from "./pages/HelpSupport/HelpSupport";
 import StudyPlan from "./pages/StudyPlan/StudyPlan";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+import { UserStatsProvider } from "./context/UserStatsContext";
+
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <SidebarProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Singup />} />
-            <Route path="/otp" element={<OtpVerification />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+        <UserStatsProvider>
+          <SidebarProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Singup />} />
+              <Route path="/otp" element={<OtpVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/mock-interview" element={<MockInterview />} />
-              <Route path="/mock-interview/session" element={<InterviewSession />} />
-              <Route path="/mock-interview/report/:id" element={<InterviewReport />} />
-              <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
-              <Route path="/resume/report" element={<ResumeReport />} />
-              <Route path="/coding-practice" element={<CodingPractice />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/question-bank" element={<QuestionBank />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/help-support" element={<HelpSupport />} />
-              <Route path="/study-plan" element={<StudyPlan />} />
-            </Route>
-          </Routes>
-        </SidebarProvider>
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/mock-interview" element={<MockInterview />} />
+                <Route path="/mock-interview/session" element={<InterviewSession />} />
+                <Route path="/mock-interview/report/:id" element={<InterviewReport />} />
+                <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+                <Route path="/resume/report" element={<ResumeReport />} />
+                <Route path="/coding-practice" element={<CodingPractice />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/question-bank" element={<QuestionBank />} />
+                <Route path="/progress" element={<Progress />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/help-support" element={<HelpSupport />} />
+                <Route path="/study-plan" element={<StudyPlan />} />
+              </Route>
+            </Routes>
+          </SidebarProvider>
+        </UserStatsProvider>
       </AuthProvider>
     </Router>
   );

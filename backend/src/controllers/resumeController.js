@@ -1,5 +1,6 @@
 const pdfParse = require("pdf-parse");
 const { analyzeResumeWithAI } = require("../services/resumeAnalyzerService");
+const { updateUserStreak } = require("../utils/streakUtils");
 const analyzeResume = async (req, res) => {
   try {
     // Check if file exists
@@ -31,6 +32,9 @@ const analyzeResume = async (req, res) => {
       skillsScore: analysis.skillsScore || 0,
       atsScore: analysis.atsScore || 0
     });
+
+    // Update Streak
+    await updateUserStreak(req.user._id);
 
     res.status(200).json({
       success: true,

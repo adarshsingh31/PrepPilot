@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getAnalytics } from "../../services/analyticsService";
 import { getHistory as getInterviewHistory } from "../../services/mockInterviewApi";
 import { getResumeHistory } from "../../services/resumeService";
+import { useUserStats } from "../../context/UserStatsContext";
 import { updateProfile } from "../../services/authService";
 import toast from "react-hot-toast";
 
@@ -13,6 +14,7 @@ function Profile() {
   const [interviews, setInterviews] = useState([]);
   const [resumes, setResumes] = useState([]);
   const [codingAnalytics, setCodingAnalytics] = useState(null);
+  const { stats, loading: statsLoading } = useUserStats();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -82,11 +84,12 @@ function Profile() {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
   };
 
-  const totalInterviews = interviews.filter((i) => i.status === "Completed").length;
   const sortedResumes = [...resumes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const latestResumeScore = sortedResumes.length > 0 ? sortedResumes[0].score : 0;
-  const problemsSolved = codingAnalytics?.totalSolved || 0;
-  const currentStreak = codingAnalytics?.streak || 0;
+  const latestResumeScore = stats?.resumeScore || 0;
+  const problemsSolved = stats?.problemsSolved || 0;
+  const currentStreak = stats?.currentStreak || 0;
+  const longestStreak = stats?.longestStreak || 0;
+  const totalInterviews = stats?.mockInterviews || 0;
 
   const generateActivities = () => {
     let activities = [];
@@ -153,7 +156,7 @@ function Profile() {
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "User"}`;
 
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <AppLayout>
         <div className="p-4 md:p-8 flex items-center justify-center min-h-[50vh]">
@@ -259,12 +262,13 @@ function Profile() {
             </div>
 
             <div className="xl:col-span-8 flex flex-col gap-6 md:gap-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
                 {[
                   { icon: "mic", bg: "bg-indigo-50", color: "text-primary", hbg: "group-hover:bg-primary", val: totalInterviews, label: "Mock Interviews" },
                   { icon: "description", bg: "bg-emerald-50", color: "text-tertiary", hbg: "group-hover:bg-tertiary", val: latestResumeScore, suffix: "/100", label: "Resume Score" },
                   { icon: "code", bg: "bg-indigo-50", color: "text-primary", hbg: "group-hover:bg-primary", val: problemsSolved, label: "Problems Solved" },
                   { icon: "local_fire_department", bg: "bg-orange-50", color: "text-orange-600", hbg: "group-hover:bg-orange-600", val: currentStreak, suffix: " Days", label: "Current Streak" },
+                  { icon: "workspace_premium", bg: "bg-yellow-50", color: "text-yellow-600", hbg: "group-hover:bg-yellow-600", val: longestStreak, suffix: " Days", label: "Longest Streak" },
                 ].map((s, i) => (
                   <div key={i} className="bg-white p-4 md:p-6 rounded-3xl border border-outline-variant/30 card-shadow text-center group hover:-translate-y-1 transition-transform duration-300">
                     <div className={`w-12 h-12 ${s.bg} ${s.color} rounded-2xl flex items-center justify-center mx-auto mb-4 ${s.hbg} group-hover:text-white transition-colors duration-300`}><span className="material-symbols-outlined">{s.icon}</span></div>

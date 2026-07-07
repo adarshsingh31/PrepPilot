@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const UserQuestion = require("../models/userQuestion");
 const Question = require("../models/question");
+const { updateUserStreak } = require("../utils/streakUtils");
 
 const getUserQuestions = async (req, res) => {
   try {
@@ -89,6 +90,10 @@ const updateUserQuestion = async (req, res) => {
         runValidators: true,
       },
     );
+
+    if (updates.status === "Practiced") {
+      await updateUserStreak(userId);
+    }
 
     res.status(200).json({
       success: true,

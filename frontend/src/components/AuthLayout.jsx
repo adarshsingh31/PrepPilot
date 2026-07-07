@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import ThemeToggle from "./ThemeToggle";
 
 const AuthLayout = ({ children }) => {
   useEffect(() => {
@@ -30,11 +29,6 @@ const AuthLayout = ({ children }) => {
           className="orb absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-tertiary rounded-full transition-transform duration-200 ease-out"
           style={{ animationDelay: "-5s" }}
         ></div>
-      </div>
-
-      {/* Floating Theme Toggle */}
-      <div className="fixed top-6 right-6 z-50">
-        <ThemeToggle />
       </div>
 
       {/* Main Content */}

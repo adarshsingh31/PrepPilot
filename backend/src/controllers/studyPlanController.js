@@ -1,4 +1,5 @@
 const StudyPlan = require("../models/StudyPlan");
+const { updateUserStreak } = require("../utils/streakUtils");
 
 // Get all study plans for the logged-in user
 const getStudyPlans = async (req, res) => {
@@ -69,6 +70,11 @@ const updateStudyPlan = async (req, res) => {
     studyPlan.progress = progress ?? studyPlan.progress;
 
     await studyPlan.save();
+    
+    // Update streak if completed
+    if (studyPlan.status === "Completed") {
+      await updateUserStreak(req.user._id);
+    }
 
     res.status(200).json({
       success: true,

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getDashboard } from "../../services/dashboardService";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function timeAgo(dateInput) {
   if (!dateInput) return "";
@@ -25,6 +26,7 @@ function timeAgo(dateInput) {
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { stats, loading: statsLoading } = useUserStats();
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -42,7 +44,7 @@ function Dashboard() {
     fetchDashboard();
   }, []);
 
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <AppLayout>
         <div className="p-4 md:p-8">
@@ -92,14 +94,14 @@ function Dashboard() {
               <div className="text-left">
                 <div className="flex items-baseline gap-2">
                   <span className="font-display-xl text-4xl text-on-surface">
-                    {summary?.currentStreak || 0}
+                    {stats?.currentStreak || 0}
                   </span>
                   <span className="font-label-md text-on-surface-variant uppercase tracking-tighter">
                     Day Streak
                   </span>
                 </div>
                 <p className="text-xs text-on-surface-variant">
-                  {summary?.currentStreak > 0 ? "Keep it up! 🔥" : "Start a streak today!"}
+                  {stats?.currentStreak > 0 ? "Keep it up! 🔥" : "Start a streak today!"}
                 </p>
               </div>
             </div>
@@ -123,9 +125,9 @@ function Dashboard() {
                 </div>
                 <p className="font-label-md text-on-surface-variant mb-1">Mock Interviews</p>
                 <div className="flex items-baseline gap-2 mb-4">
-                  {summary?.interviewsCompleted > 0 ? (
+                  {stats?.mockInterviews > 0 ? (
                     <>
-                      <span className="font-headline-md text-headline-md">{summary.interviewsCompleted}</span>
+                      <span className="font-headline-md text-headline-md">{stats.mockInterviews}</span>
                       <span className="text-xs text-on-surface-variant">Completed</span>
                     </>
                   ) : (
@@ -156,10 +158,10 @@ function Dashboard() {
                 </div>
                 <p className="font-label-md text-on-surface-variant mb-1">Resume Score</p>
                 <div className="flex items-baseline gap-2 mb-4">
-                  {summary?.resumeScore > 0 ? (
+                  {stats?.resumeScore > 0 ? (
                     <>
                       <span className="font-headline-md text-headline-md text-tertiary">
-                        {summary.resumeScore}
+                        {stats.resumeScore}
                         <span className="text-headline-sm text-on-surface-variant">/100</span>
                       </span>
                     </>
@@ -191,9 +193,9 @@ function Dashboard() {
                 </div>
                 <p className="font-label-md text-on-surface-variant mb-1">Coding Problems</p>
                 <div className="flex items-baseline gap-2 mb-4">
-                  {summary?.codingSolved > 0 ? (
+                  {stats?.problemsSolved > 0 ? (
                     <>
-                      <span className="font-headline-md text-headline-md">{summary.codingSolved}</span>
+                      <span className="font-headline-md text-headline-md">{stats.problemsSolved}</span>
                       <span className="text-xs text-on-surface-variant">Solved</span>
                     </>
                   ) : (
@@ -219,9 +221,17 @@ function Dashboard() {
                 <p className="font-label-md text-on-surface-variant mb-1">Current Streak</p>
                 <div className="flex items-baseline gap-2 mb-4">
                   <span className="font-headline-md text-headline-md text-orange-600">
-                    {summary?.currentStreak || 0} <span className="text-headline-sm">Days</span>
+                    {loading ? (
+                      <div className="h-8 w-24 bg-surface-container-highest rounded-lg animate-pulse inline-block align-middle"></div>
+                    ) : dashboardData?.summary?.currentStreak > 0 ? (
+                      <>{dashboardData.summary.currentStreak} <span className="text-headline-sm text-orange-600">Days</span></>
+                    ) : (
+                      <span className="text-sm text-orange-600">No active streak yet</span>
+                    )}
                   </span>
-                  <span className="text-xs text-on-surface-variant">Active</span>
+                  {!loading && dashboardData?.summary?.currentStreak > 0 && (
+                     <span className="text-xs text-on-surface-variant">Active 🔥</span>
+                  )}
                 </div>
               </div>
               <div className="h-12 w-full opacity-30">

@@ -1,9 +1,12 @@
 const Interview = require("../models/interview");
+const User = require("../models/user");
 const {
   generateInterviewQuestions,
   evaluateAnswer,
   generateInterviewReport,
 } = require("../services/mockInterviewService");
+const { updateUserStreak } = require("../utils/streakUtils");
+
 const startInterview = async (req, res) => {
   try {
     const { domain, difficulty, duration, mode } = req.body;
@@ -195,6 +198,9 @@ const finishInterview = async (req, res) => {
     interview.completedAt = new Date();
 
     await interview.save();
+
+    // Update Streak
+    await updateUserStreak(req.user.id);
 
     res.status(200).json({
       success: true,

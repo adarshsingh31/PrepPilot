@@ -7,6 +7,7 @@ import {
   updateStudyPlan,
   deleteStudyPlan,
 } from "../../services/studyPlanService";
+import { useUserStats } from "../../context/UserStatsContext";
 
 // ─── Create Plan Modal ────────────────────────────────────────────────────────
 function CreatePlanModal({ onClose, onCreate }) {
@@ -369,6 +370,7 @@ function StudyPlan() {
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const { refreshStats } = useUserStats();
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null); // plan object being edited
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
@@ -435,6 +437,7 @@ function StudyPlan() {
     try {
       await updateStudyPlan(id, { status: nextStatus, progress: nextProgress });
       await fetchPlans();
+      if (nextStatus === "Completed") refreshStats();
     } catch (err) {
       console.error("Failed to toggle study plan task status:", err);
       alert(err?.response?.data?.message || "Failed to update plan status");

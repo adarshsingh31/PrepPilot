@@ -3,6 +3,7 @@ import AppLayout from "../../components/AppLayout";
 import { getAnalytics } from "../../services/analyticsService";
 import { getQuestions } from "../../services/questionService";
 import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function CodingPractice() {
   const [selectedTopic, setSelectedTopic] = useState("All Topics");
@@ -20,6 +21,7 @@ function CodingPractice() {
   const [userProgress, setUserProgress] = useState({});
   const [editingNoteQuestionId, setEditingNoteQuestionId] = useState(null);
   const [noteText, setNoteText] = useState("");
+  const { stats, refreshStats, loading: statsLoading } = useUserStats();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,7 +152,7 @@ function CodingPractice() {
   const displayedTopics = showAllTopicsPills ? allTopics : allTopics.slice(0, 8);
 
   const completionPct = analytics?.completionPercentage || 0;
-  const practiced = analytics?.practicedQuestions || 0;
+  const practiced = stats?.problemsSolved || 0;
   const easy = analytics?.difficultyStats?.easy || 0;
   const medium = analytics?.difficultyStats?.medium || 0;
   const hard = analytics?.difficultyStats?.hard || 0;
@@ -214,7 +216,7 @@ function CodingPractice() {
             </div>
 
             <div className="space-y-4">
-              {loadingQuestions ? (
+              {loading || statsLoading || loadingQuestions ? (
                 <div className="text-center py-8 text-on-surface-variant font-bold">Loading questions...</div>
               ) : questions.length === 0 ? (
                 <div className="text-center py-8 text-on-surface-variant font-bold">No problems found.</div>

@@ -3,11 +3,13 @@ import AppLayout from "../../components/AppLayout";
 import { getAnalytics } from "../../services/analyticsService";
 import { getHistory as getInterviewHistory } from "../../services/mockInterviewApi";
 import { getResumeHistory } from "../../services/resumeService";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function Progress() {
   const [filter, setFilter] = useState("This Month");
   const [loading, setLoading] = useState(true);
   const [showAllTopics, setShowAllTopics] = useState(false);
+  const { stats, loading: statsLoading } = useUserStats();
 
   // Raw data from backend
   const [codingAnalytics, setCodingAnalytics] = useState(null);
@@ -273,45 +275,9 @@ function Progress() {
     .slice(0, showAllTopics ? undefined : 3);
 
   // ----------------------------------------------------
-  // SECTION 1: STREAK CALCULATION
-  // ----------------------------------------------------
-  const calculateStreak = () => {
-    const dates = new Set();
-    completedInterviews.forEach((i) =>
-      dates.add(new Date(i.completedAt || i.createdAt).toLocaleDateString("en-CA"))
-    );
-    practicedQuestionsList.forEach((q) =>
-      dates.add(new Date(q.updatedAt || q.lastSolved || q.createdAt).toLocaleDateString("en-CA"))
-    );
-    resumes.forEach((r) => dates.add(new Date(r.createdAt).toLocaleDateString("en-CA")));
-
-    const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
-    let streakCount = 0;
-    if (sortedDates.length > 0) {
-      const todayStr = new Date().toLocaleDateString("en-CA");
-      const yesterdayStr = new Date(Date.now() - 86400000).toLocaleDateString("en-CA");
-
-      if (sortedDates[0] === todayStr || sortedDates[0] === yesterdayStr) {
-        streakCount = 1;
-        let current = new Date(sortedDates[0]);
-        for (let i = 1; i < sortedDates.length; i++) {
-          const prev = new Date(sortedDates[i]);
-          const diffTime = Math.abs(current - prev);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          if (diffDays === 1) {
-            streakCount++;
-            current = prev;
-          } else if (diffDays > 1) {
-            break;
-          }
-        }
-      }
-    }
-    return { streak: streakCount, sortedDates };
-  };
-
-  const { streak, sortedDates } = calculateStreak();
-  const streakTrendText = streak > 0 ? "Active 🔥" : "No Streak";
+  const currentStreak = stats?.currentStreak || 0;
+  const longestStreak = stats?.longestStreak || 0;
+  const streakTrendText = currentStreak > 0 ? "Active 🔥" : "No active streak yet";
 
   // Summary Card Config
   const summaryCards = [
@@ -344,13 +310,21 @@ function Progress() {
     },
     {
       icon: "local_fire_department",
+      color: "text-orange-500",
+      bg: "bg-orange-50",
       label: "Current Streak",
-      value: loading ? "-" : `${streak} Day${streak === 1 ? "" : "s"}`,
-      sub: "Keep it up!",
+      value: loading ? "-" : `${currentStreak} Day${currentStreak === 1 ? "" : "s"}`,
       trend: streakTrendText,
-      color: "text-primary-container",
-      bg: "bg-primary-container/10",
-      fill: true,
+      trendColor: currentStreak > 0 ? "text-orange-500" : "text-secondary",
+    },
+    {
+      icon: "workspace_premium",
+      color: "text-yellow-500",
+      bg: "bg-yellow-50",
+      label: "Longest Streak",
+      value: loading ? "-" : `${longestStreak} Day${longestStreak === 1 ? "" : "s"}`,
+      trend: "All-time Best",
+      trendColor: "text-yellow-500",
     },
   ];
 
@@ -470,8 +444,8 @@ function Progress() {
     }
 
     // Streaks milestones
-    if (streak >= 7) {
-      const streakDate = sortedDates[0] ? new Date(sortedDates[0]) : new Date();
+    if (longestStreak >= 7) {
+      const streakDate = new Date();
       list.push({
         icon: "local_fire_department",
         bg: "bg-[#f59e0b]/10",
@@ -481,8 +455,8 @@ function Progress() {
         date: streakDate,
       });
     }
-    if (streak >= 30) {
-      const streakDate = sortedDates[0] ? new Date(sortedDates[0]) : new Date();
+    if (longestStreak >= 30) {
+      const streakDate = new Date();
       list.push({
         icon: "local_fire_department",
         bg: "bg-[#f59e0b]/10",
@@ -499,7 +473,7 @@ function Progress() {
   const milestones = getMilestones();
 
   // Section 10 - Loading Skeletons
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <AppLayout>
         <div className="p-4 md:p-8">

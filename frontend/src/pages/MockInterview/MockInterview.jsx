@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import AppLayout from "../../components/AppLayout";
 import { startInterview, getHistory } from "../../services/mockInterviewApi";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function MockInterview() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function MockInterview() {
   const [graphFilter, setGraphFilter] = useState("This Week");
   const [showTipsModal, setShowTipsModal] = useState(false);
   const [showAllInterviews, setShowAllInterviews] = useState(false);
+  const { stats, loading: statsLoading } = useUserStats();
 
   const domains = [
     { id: "DSA", label: "DSA", icon: "code" },
@@ -146,12 +148,7 @@ function MockInterview() {
   const totalPracticeTime = completedInterviews.reduce((acc, curr) => acc + (curr.duration || 0), 0);
   
   // Total Questions Answered
-  const totalQuestions = completedInterviews.reduce((acc, curr) => {
-    // Estimate from duration if backend didn't return questions
-    if (curr.questions && curr.questions.length) return acc + curr.questions.length;
-    const opt = durationOptions.find(d => d.label === `${curr.duration} min`);
-    return acc + (opt ? opt.q : 5);
-  }, 0);
+  const totalQuestions = stats?.problemsSolved || 0;
 
   // Improvement Percentage
   let improvementPercentage = 0;
@@ -169,37 +166,7 @@ function MockInterview() {
   }
 
   // Streak logic
-  let streak = 0;
-  if (totalCompleted > 0) {
-    const dates = [...new Set(completedInterviews.map(i => new Date(i.createdAt).toDateString()))];
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const lastInterviewDate = new Date(dates[0]);
-    lastInterviewDate.setHours(0, 0, 0, 0);
-
-    if (lastInterviewDate.getTime() === today.getTime() || lastInterviewDate.getTime() === yesterday.getTime()) {
-      streak = 1;
-      let checkDate = new Date(lastInterviewDate);
-      
-      for (let i = 1; i < dates.length; i++) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        const prevDate = new Date(dates[i]);
-        prevDate.setHours(0,0,0,0);
-        
-        if (prevDate.getTime() === checkDate.getTime()) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-    }
-  }
-  const formattedStreak = `${streak} Day${streak !== 1 ? 's' : ''}`;
+  const formattedStreak = `${stats?.currentStreak || 0} Day${stats?.currentStreak !== 1 ? 's' : ''}`;
 
   // Graph Data Calculation
   const getGraphData = () => {
@@ -803,94 +770,104 @@ function MockInterview() {
                     <option value="This Month">This Month</option>
                   </select>
                 </div>
-                {isHistoryLoading ? (
+                {isHistoryLoading || statsLoading ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                     {[1, 2, 3, 4, 5, 6, 7].map((skeleton) => (
                       <div key={skeleton} className="h-[90px] rounded-xl bg-surface-container-low animate-pulse"></div>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      {
-                        icon: "mic",
-                        value: totalCompleted.toString(),
-                        label: "Completed",
-                        bg: "bg-primary/10",
-                        color: "text-primary",
-                      },
-                      {
-                        icon: "stars",
-                        value: `${avgScore}%`,
-                        label: "Avg Score",
-                        bg: "bg-tertiary/10",
-                        color: "text-tertiary",
-                      },
-                      {
-                        icon: "military_tech",
-                        value: bestScore.toString(),
-                        label: "Best Score",
-                        bg: "bg-emerald-500/10",
-                        color: "text-emerald-600",
-                      },
-                      {
-                        icon: "local_fire_department",
-                        value: formattedStreak,
-                        label: "Streak",
-                        bg: "bg-error/10",
-                        color: "text-error",
-                        fill: true,
-                      },
-                      {
-                        icon: "trending_up",
-                        value: `${improvementPercentage > 0 ? '+' : ''}${improvementPercentage}%`,
-                        label: "Improvement",
-                        bg: "bg-blue-500/10",
-                        color: "text-blue-600",
-                      },
-                      {
-                        icon: "schedule",
-                        value: `${totalPracticeTime}m`,
-                        label: "Practice Time",
-                        bg: "bg-purple-500/10",
-                        color: "text-purple-600",
-                      },
-                      {
-                        icon: "quiz",
-                        value: totalQuestions.toString(),
-                        label: "Questions",
-                        bg: "bg-amber-500/10",
-                        color: "text-amber-600",
-                      },
-                    ].map((s, i) => (
-                      <div
-                        key={i}
-                        className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-left hover:border-primary/30 hover:shadow-sm transition-all duration-300 group cursor-default"
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div
-                            className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center ${s.color} group-hover:scale-110 transition-transform duration-300`}
-                          >
-                            <span
-                              className="material-symbols-outlined text-xl"
-                              style={
-                                s.fill
-                                  ? { fontVariationSettings: "'FILL' 1" }
-                                  : undefined
-                              }
-                            >
-                              {s.icon}
-                            </span>
+                  <div className="flex flex-col gap-4">
+                    {/* Row 1: 4 cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        {
+                          icon: "mic",
+                          value: totalCompleted.toString(),
+                          label: "Completed",
+                          bg: "bg-primary/10",
+                          color: "text-primary",
+                        },
+                        {
+                          icon: "stars",
+                          value: `${avgScore}%`,
+                          label: "Avg Score",
+                          bg: "bg-tertiary/10",
+                          color: "text-tertiary",
+                        },
+                        {
+                          icon: "military_tech",
+                          value: bestScore.toString(),
+                          label: "Best Score",
+                          bg: "bg-emerald-500/10",
+                          color: "text-emerald-600",
+                        },
+                        {
+                          icon: "local_fire_department",
+                          value: formattedStreak,
+                          label: "Streak",
+                          bg: "bg-error/10",
+                          color: "text-error",
+                          fill: true,
+                        },
+                      ].map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-left hover:border-primary/30 hover:shadow-sm transition-all duration-300 group cursor-default overflow-hidden"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-8 h-8 shrink-0 rounded-lg ${s.bg} flex items-center justify-center ${s.color} group-hover:scale-110 transition-transform duration-300`}>
+                              <span className="material-symbols-outlined text-[18px]" style={s.fill ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                                {s.icon}
+                              </span>
+                            </div>
+                            <span className="text-xl font-extrabold text-on-surface">{s.value}</span>
                           </div>
-                          <span className="text-2xl font-extrabold text-on-surface">
-                            {s.value}
-                          </span>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{s.label}</p>
                         </div>
-                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                          {s.label}
-                        </p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    {/* Row 2: 3 cards — same width as top row cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        {
+                          icon: "trending_up",
+                          value: `${improvementPercentage > 0 ? '+' : ''}${improvementPercentage}%`,
+                          label: "Improvement",
+                          bg: "bg-blue-500/10",
+                          color: "text-blue-600",
+                        },
+                        {
+                          icon: "schedule",
+                          value: `${totalPracticeTime}m`,
+                          label: "Practice Time",
+                          bg: "bg-purple-500/10",
+                          color: "text-purple-600",
+                        },
+                        {
+                          icon: "quiz",
+                          value: totalQuestions.toString(),
+                          label: "Questions",
+                          bg: "bg-amber-500/10",
+                          color: "text-amber-600",
+                        },
+                      ].map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-left hover:border-primary/30 hover:shadow-sm transition-all duration-300 group cursor-default overflow-hidden"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-8 h-8 shrink-0 rounded-lg ${s.bg} flex items-center justify-center ${s.color} group-hover:scale-110 transition-transform duration-300`}>
+                              <span className="material-symbols-outlined text-[18px]" style={s.fill ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                                {s.icon}
+                              </span>
+                            </div>
+                            <span className="text-xl font-extrabold text-on-surface">{s.value}</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

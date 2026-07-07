@@ -3,10 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import AppLayout from "../../components/AppLayout";
 import { submitAnswer, finishInterview } from "../../services/mockInterviewApi";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function InterviewSession() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { refreshStats } = useUserStats();
 
   const [sessionData, setSessionData] = useState(() => {
     if (location.state && location.state.interviewId) {
@@ -125,6 +127,7 @@ function InterviewSession() {
       const response = await finishInterview(interviewId);
       if (response.success) {
         sessionStorage.removeItem("activeInterview");
+        refreshStats();
         toast.success(isAutoSubmit ? "Time's up! Interview completed automatically." : "Interview completed successfully!");
         navigate(`/mock-interview/report/${interviewId}`);
       }

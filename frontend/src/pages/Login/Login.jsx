@@ -199,24 +199,6 @@ const Login = () => {
               )}
             </button>
 
-            <div className="flex items-center gap-3 text-on-surface-variant text-xs font-semibold uppercase tracking-[0.2em] my-4">
-              <span className="h-px flex-1 bg-outline-variant/40"></span>
-              <span>or continue with</span>
-              <span className="h-px flex-1 bg-outline-variant/40"></span>
-            </div>
-
-            <button
-              type="button"
-              className="w-full py-3.5 rounded-lg border border-outline-variant/40 bg-surface-container-low text-on-surface font-semibold transition-all hover:border-primary/40 hover:bg-surface-container"
-            >
-              <span className="inline-flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">
-                  mail
-                </span>
-                Continue with Google
-              </span>
-            </button>
-
             <p className="text-center text-base text-on-surface-variant mt-4">
               New to PrepPilot?{" "}
               <Link

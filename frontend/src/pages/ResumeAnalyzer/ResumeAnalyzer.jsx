@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../../components/AppLayout";
 import { analyzeResume } from "../../services/resumeService";
+import { useUserStats } from "../../context/UserStatsContext";
+import toast from "react-hot-toast";
 
 // ─── Alert Modal ──────────────────────────────────────────────────────────────
 function AlertModal({ onClose, message }) {
@@ -67,6 +69,7 @@ function ResumeAnalyzer() {
   const fileInputRef = useRef(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const { refreshStats } = useUserStats();
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -96,6 +99,8 @@ function ResumeAnalyzer() {
       const response = await analyzeResume(formData);
       if (response.success) {
         setAnalysis(response.analysis);
+        refreshStats();
+        toast.success("Resume analyzed successfully!");
       } else {
         setError(response.message || "Failed to analyze resume.");
       }

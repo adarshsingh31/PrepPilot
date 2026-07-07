@@ -3,6 +3,7 @@ import AppLayout from "../../components/AppLayout";
 import { getQuestions } from "../../services/questionService";
 import { getUserQuestions, updateUserQuestion } from "../../services/userQuestionService";
 import { getAnalytics } from "../../services/analyticsService";
+import { useUserStats } from "../../context/UserStatsContext";
 
 function QuestionBank() {
   const [questions, setQuestions] = useState([]);
@@ -27,6 +28,7 @@ function QuestionBank() {
   // State for User Progress (fetched from MERN backend)
   const [userProgress, setUserProgress] = useState({});
   const [analytics, setAnalytics] = useState(null);
+  const { refreshStats } = useUserStats();
 
   // Notes Modal state
   const [editingNoteQuestionId, setEditingNoteQuestionId] = useState(null);
@@ -169,10 +171,13 @@ function QuestionBank() {
       // Call API
       const response = await updateUserQuestion(id, { status: nextStatus });
       if (response.success && response.userQuestion) {
-        setUserProgress(prev => ({
+        setUserProgress((prev) => ({
           ...prev,
-          [id]: response.userQuestion
+          [id]: response.userQuestion,
         }));
+        if (nextStatus === "Practiced") {
+          refreshStats();
+        }
       }
     } catch (err) {
       console.error("Failed to update status", err);
