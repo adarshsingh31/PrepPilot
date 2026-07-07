@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/mock-interview";
+const API_URL = `${import.meta.env.VITE_API_URL}/mock-interview`;
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -18,7 +18,8 @@ const handleError = (error, defaultMessage) => {
     if (status === 401) throw new Error("Unauthorized. Please log in again.");
     if (status === 404) throw new Error("Resource not found.");
     if (status === 429) throw new Error("Too many requests. Please slow down.");
-    if (status === 503) throw new Error("Service unavailable. Try again later.");
+    if (status === 503)
+      throw new Error("Service unavailable. Try again later.");
     throw new Error(msg || defaultMessage);
   } else if (error.request) {
     throw new Error("Network error. Please check your connection.");
@@ -29,7 +30,11 @@ const handleError = (error, defaultMessage) => {
 
 export const startInterview = async (data) => {
   try {
-    const response = await axios.post(`${API_URL}/start`, data, getAuthHeaders());
+    const response = await axios.post(
+      `${API_URL}/start`,
+      data,
+      getAuthHeaders(),
+    );
     return response.data;
   } catch (error) {
     handleError(error, "Failed to start interview.");
@@ -38,7 +43,11 @@ export const startInterview = async (data) => {
 
 export const submitAnswer = async (data) => {
   try {
-    const response = await axios.post(`${API_URL}/answer`, data, getAuthHeaders());
+    const response = await axios.post(
+      `${API_URL}/answer`,
+      data,
+      getAuthHeaders(),
+    );
     return response.data;
   } catch (error) {
     handleError(error, "Failed to submit answer.");
@@ -47,7 +56,11 @@ export const submitAnswer = async (data) => {
 
 export const finishInterview = async (interviewId) => {
   try {
-    const response = await axios.post(`${API_URL}/finish`, { interviewId }, getAuthHeaders());
+    const response = await axios.post(
+      `${API_URL}/finish`,
+      { interviewId },
+      getAuthHeaders(),
+    );
     return response.data;
   } catch (error) {
     handleError(error, "Failed to finish interview.");
