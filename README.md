@@ -455,7 +455,7 @@ graph TD
 1. **User Interaction** — User performs an action (e.g., starts a mock interview) on the React frontend.
 2. **API Request** — Axios sends an authenticated REST request to the Express backend.
 3. **Auth Middleware** — JWT middleware validates the token before granting access to protected routes.
-4. **Business Logic** — Controllers process the request; if AI is required, the request is routed to the Gemini service layer.
+4. **Business Logic** — Controllers/routes process the request; if AI is required, the request is routed to the Gemini service layer.
 5. **AI Processing** — The Gemini API generates questions, evaluates answers, or analyzes resumes.
 6. **Persistence** — Mongoose writes/reads relevant data to/from MongoDB Atlas.
 7. **Response** — The backend returns a structured JSON response, which the frontend renders in real time.
@@ -466,80 +466,111 @@ graph TD
 
 ```
 PrepPilot/
-├── client/                         # Frontend (React + Vite)
-│   ├── public/
-│   │   └── favicon.ico
-│   ├── src/
-│   │   ├── assets/                 # Images, icons, static assets
-│   │   ├── components/             # Reusable UI components
-│   │   │   ├── common/             # Buttons, inputs, modals, loaders
-│   │   │   ├── layout/             # Navbar, Sidebar, Footer
-│   │   │   └── charts/             # Analytics chart components
-│   │   ├── pages/                  # Route-level page components
-│   │   │   ├── Landing/
-│   │   │   ├── Auth/                # Login, Signup, OTP, Reset
-│   │   │   ├── Dashboard/
-│   │   │   ├── MockInterview/
-│   │   │   ├── ResumeAnalyzer/
-│   │   │   ├── CodingPractice/
-│   │   │   ├── QuestionBank/
-│   │   │   ├── StudyPlan/
-│   │   │   ├── Progress/
-│   │   │   ├── Profile/
-│   │   │   └── Help/
-│   │   ├── context/                 # React Context providers (Auth, Theme)
-│   │   ├── hooks/                   # Custom React hooks
-│   │   ├── services/                # Axios API service modules
-│   │   ├── utils/                   # Helper functions
-│   │   ├── routes/                  # React Router route definitions
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── .env
-│   ├── index.html
-│   ├── tailwind.config.js
-│   ├── vite.config.js
-│   └── package.json
-│
-├── server/                          # Backend (Node.js + Express)
-│   ├── config/
-│   │   ├── db.js                    # MongoDB connection
-│   │   └── gemini.js                # Gemini API client setup
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── interviewController.js
-│   │   ├── resumeController.js
-│   │   ├── questionController.js
-│   │   ├── studyPlanController.js
-│   │   └── analyticsController.js
+├── backend/                          # Backend (Node.js + Express)
 │   ├── middleware/
 │   │   ├── authMiddleware.js
-│   │   ├── errorHandler.js
 │   │   └── uploadMiddleware.js
 │   ├── models/
-│   │   ├── User.js
-│   │   ├── Interview.js
+│   │   ├── interview.js
+│   │   ├── question.js
 │   │   ├── Resume.js
-│   │   ├── Question.js
 │   │   ├── StudyPlan.js
-│   │   └── Progress.js
+│   │   ├── user.js
+│   │   ├── userQuestion.js
+│   │   └── UserStats.js
 │   ├── routes/
+│   │   ├── analyticsRoutes.js
 │   │   ├── authRoutes.js
-│   │   ├── interviewRoutes.js
-│   │   ├── resumeRoutes.js
+│   │   ├── dashboardRoutes.js
+│   │   ├── mockInterviewRoutes.js
 │   │   ├── questionRoutes.js
+│   │   ├── resumeRoutes.js
+│   │   ├── searchRoutes.js
 │   │   ├── studyPlanRoutes.js
-│   │   └── analyticsRoutes.js
+│   │   └── userQuestionRoutes.js
 │   ├── services/
-│   │   ├── geminiService.js          # AI prompt & response handling
-│   │   └── emailService.js           # OTP / password reset emails
+│   │   ├── mockInterviewService.js
+│   │   └── resumeAnalyzerService.js
 │   ├── utils/
-│   │   ├── generateToken.js
-│   │   └── validators.js
-│   ├── .env
+│   │   ├── milestoneGenerator.js
+│   │   ├── streakUtils.js
+│   │   └── timeTracker.js
+│   ├── validations/                  # Request/schema validation logic
+│   ├── stackQueue.js
+│   ├── strings.js
+│   ├── trees.js
+│   ├── app.js
+│   ├── seedQuestions.js
 │   ├── server.js
+│   ├── testGemini.js
+│   ├── .env
+│   ├── .gitignore
+│   ├── package-lock.json
 │   └── package.json
 │
-├── screenshots/                      # README image assets
+├── frontend/                          # Frontend (React + Vite)
+│   ├── image/                         # README screenshot assets
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   ├── icons.svg
+│   │   └── sample_resume.pdf
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── axios.js
+│   │   ├── assets/
+│   │   │   └── hero.png
+│   │   ├── components/
+│   │   │   ├── AppLayout.jsx
+│   │   │   ├── AuthCard.jsx
+│   │   │   ├── AuthInput.jsx
+│   │   │   ├── AuthLayout.jsx
+│   │   │   ├── PasswordInput.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── SidebarContext.jsx
+│   │   │   └── ThemeToggle.jsx
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx
+│   │   │   └── UserStatsContext.jsx
+│   │   ├── hooks/
+│   │   │   └── useTimeTracker.js
+│   │   ├── pages/
+│   │   │   ├── CodingPractice/
+│   │   │   ├── Dashboard/
+│   │   │   ├── ForgotPassword/
+│   │   │   ├── HelpSupport/
+│   │   │   ├── Landing/
+│   │   │   ├── Login/
+│   │   │   ├── MockInterview/
+│   │   │   ├── OtpVerification/
+│   │   │   ├── Profile/
+│   │   │   ├── Progress/
+│   │   │   ├── QuestionBank/
+│   │   │   ├── ResetPassword/
+│   │   │   ├── ResumeAnalyzer/
+│   │   │   ├── Settings/
+│   │   │   ├── Singup/
+│   │   │   └── StudyPlan/
+│   │   ├── services/
+│   │   │   ├── analyticsService.js
+│   │   │   ├── authService.js
+│   │   │   ├── dashboardService.js
+│   │   │   ├── milestoneService.js
+│   │   │   ├── mockInterviewApi.js
+│   │   │   ├── questionService.js
+│   │   │   ├── resumeService.js
+│   │   │   ├── studyPlanService.js
+│   │   │   ├── timeService.js
+│   │   │   └── userQuestionService.js
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── .env
+│   ├── .eslintrc
+│   ├── .gitignore
+│   ├── index.html
+│   ├── package-lock.json
+│   └── package.json
+│
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -566,11 +597,11 @@ cd PrepPilot
 ### 2️⃣ Backend Setup
 
 ```bash
-cd server
+cd backend
 npm install
 ```
 
-Create a `.env` file inside `server/` (see [Environment Variables](#-environment-variables) below), then start the server:
+Create a `.env` file inside `backend/` (see [Environment Variables](#-environment-variables) below), then start the server:
 
 ```bash
 npm run dev
@@ -581,11 +612,11 @@ The backend will run on `http://localhost:5000` by default.
 ### 3️⃣ Frontend Setup
 
 ```bash
-cd client
+cd frontend
 npm install
 ```
 
-Create a `.env` file inside `client/` (see [Environment Variables](#-environment-variables) below), then start the dev server:
+Create a `.env` file inside `frontend/` (see [Environment Variables](#-environment-variables) below), then start the dev server:
 
 ```bash
 npm run dev
@@ -599,10 +630,10 @@ Open two terminal windows:
 
 ```bash
 # Terminal 1 — Backend
-cd server && npm run dev
+cd backend && npm run dev
 
 # Terminal 2 — Frontend
-cd client && npm run dev
+cd frontend && npm run dev
 ```
 
 Then visit **`http://localhost:5173`** in your browser. 🎉
@@ -611,7 +642,7 @@ Then visit **`http://localhost:5173`** in your browser. 🎉
 
 ## 🔐 Environment Variables
 
-### Backend (`server/.env`)
+### Backend (`backend/.env`)
 
 | Variable         | Description                                                |
 | ---------------- | ---------------------------------------------------------- |
@@ -626,7 +657,7 @@ Then visit **`http://localhost:5173`** in your browser. 🎉
 | `EMAIL_PASS`     | SMTP account password/app-password                         |
 | `CLIENT_URL`     | Deployed/local frontend URL, used for CORS and email links |
 
-### Frontend (`client/.env`)
+### Frontend (`frontend/.env`)
 
 | Variable            | Description                                                     |
 | ------------------- | --------------------------------------------------------------- |
